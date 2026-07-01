@@ -1,0 +1,204 @@
+@import 'leaflet/dist/leaflet.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Responsive nav offset variables ───────────────────────────────────────
+   --nav-x      : left offset when desktop side-nav is visible (0 on mobile)
+   --nav-bottom : bottom offset when mobile bottom-nav is visible (0 on desktop)
+   ─────────────────────────────────────────────────────────────────────────── */
+:root {
+  --nav-x:      0px;
+  --nav-top:    12px;
+  --nav-bottom: calc(52px + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 1024px) {
+  :root {
+    --nav-x:      80px;
+    --nav-top:    0px;
+    --nav-bottom: 0px;
+  }
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Prevent iOS/Android auto-zoom on input focus (triggered when font-size < 16px) */
+input, textarea, select {
+  font-size: 16px !important;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  font-family: 'Noto Sans Thai', 'Inter', sans-serif;
+}
+
+/* Leaflet overrides */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  font-family: 'Noto Sans Thai', sans-serif;
+}
+
+.leaflet-control-zoom {
+  border: none !important;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.2) !important;
+}
+
+.leaflet-control-zoom a {
+  background: rgba(255,255,255,0.95) !important;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  color: #3b82f6 !important;
+  border: 1px solid #e0eaff !important;
+  width: 36px !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  font-size: 18px !important;
+  transition: all 0.2s;
+}
+
+.leaflet-control-zoom a:hover {
+  background: #eff6ff !important;
+  color: #2563eb !important;
+}
+
+.leaflet-control-attribution {
+  background: rgba(255,255,255,0.85) !important;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: #94a3b8 !important;
+  border-top: 1px solid #e0eaff !important;
+  font-size: 10px !important;
+}
+
+.leaflet-control-attribution a {
+  color: #3b82f6 !important;
+}
+
+/* Custom scrollbar — pastel blue */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(147, 197, 253, 0.5);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(96, 165, 250, 0.7);
+}
+
+/* Legacy glassmorphism utilities (used in map controls) */
+.glass {
+  background: rgba(15, 23, 42, 0.75);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-light {
+  background: rgba(30, 41, 59, 0.6);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Pulse animation for live indicator */
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+.live-dot {
+  animation: livePulse 2s ease-in-out infinite;
+}
+
+/* Sidebar slide transition */
+.sidebar-transition {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.3s ease;
+}
+
+/* Leaflet tooltip */
+.custom-tooltip {
+  background: rgba(15, 23, 42, 0.9) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  color: #e2e8f0 !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  backdrop-filter: blur(8px) !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  font-family: 'Noto Sans Thai', sans-serif !important;
+  font-size: 13px !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4) !important;
+}
+
+.custom-tooltip::before {
+  border-top-color: rgba(15, 23, 42, 0.9) !important;
+}
+
+.leaflet-tooltip.custom-tooltip {
+  white-space: nowrap;
+}
+
+/* Temperature point popup */
+.temp-point-popup .leaflet-popup-content-wrapper {
+  background: rgba(255,255,255,0.97) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 8px 32px rgba(59,130,246,0.18), 0 2px 8px rgba(0,0,0,0.1) !important;
+  border: 1px solid rgba(219,234,254,0.8) !important;
+  padding: 0 !important;
+}
+.temp-point-popup .leaflet-popup-content {
+  margin: 14px 16px !important;
+}
+.temp-point-popup .leaflet-popup-tip-container {
+  display: none !important;
+}
+.temp-point-popup .leaflet-popup-close-button {
+  color: #94a3b8 !important;
+  font-size: 18px !important;
+  top: 6px !important;
+  right: 8px !important;
+  padding: 0 !important;
+}
+
+/* Hotspot pulsing ring animation */
+@keyframes hotspotRing {
+  0%   { transform: scale(1);   opacity: 0.8; }
+  100% { transform: scale(2.2); opacity: 0;   }
+}
+
+.hotspot-ring {
+  animation: hotspotRing 2s ease-out infinite;
+}
+
+/* Himawari animation frames — smooth opacity crossfade between frames */
+.himawari-frame {
+  transition: opacity 0.45s ease-in-out;
+}
+
+/* Rain drop fall animation */
+@keyframes rainDrop {
+  0%   { transform: translateY(-4px); opacity: 0; }
+  20%  { opacity: 1; }
+  100% { transform: translateY(14px); opacity: 0; }
+}
+.rain-drop { animation: rainDrop linear infinite; }
+
+/* Cloud gentle float */
+@keyframes cloudFloat {
+  0%, 100% { transform: translateX(0px);  }
+  50%       { transform: translateX(14px); }
+}
+.cloud-float { animation: cloudFloat ease-in-out infinite; }

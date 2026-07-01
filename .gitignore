@@ -1,0 +1,14 @@
+﻿node_modules/
+dist/
+
+# Large GIS/raster files - store externally (Google Drive / OneDrive)
+*.tif
+*.tif.aux.xml
+*.tif.ovr
+*.tfw
+*.zip
+Old_Cellsize03/
+Old_Cellsize03_extracted/
+# ยกเว้นไฟล์ geojson ใน public/data ที่ app ใช้งาน
+*.geojson
+!public/data/*.geojson
