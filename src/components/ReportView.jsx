@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 
-const IMGBB_KEY = 'b48174b520f12cf5eb763cff034282cd';
+const IMGBB_KEY = import.meta.env.VITE_IMGBB_KEY || 'b48174b520f12cf5eb763cff034282cd';
 
 const REPORT_TYPES = [
   { id: 'flood',    label: 'น้ำท่วม',     icon: '🌊', color: '#3b82f6' },

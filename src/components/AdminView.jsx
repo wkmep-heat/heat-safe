@@ -84,7 +84,7 @@ function PinPad({ onSuccess }) {
 }
 
 /* ── Alert composer ──────────────────────────────────────────────────────── */
-const IMGBB_KEY = 'b48174b520f12cf5eb763cff034282cd';
+const IMGBB_KEY = import.meta.env.VITE_IMGBB_KEY || 'b48174b520f12cf5eb763cff034282cd';
 
 async function uploadImageToImgBB(file) {
   const form = new FormData();
