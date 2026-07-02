@@ -263,11 +263,11 @@ export default async function handler(req, res) {
   // ── Save current state to Supabase ──────────────────────────────────────
   await supabase.from('notification_state').upsert({
     id:           1,
-    temp:         temp,
-    humidity:     humidity,
-    uv_index:     uvIndex,
-    pm25:         pm25,
-    rainfall:     rainfall,
+    temp:         data.temp,
+    humidity:     data.humidity,
+    uv_index:     data.uvIndex,
+    pm25:         data.pm25,
+    rainfall:     data.rainfall,
     last_warning: warnList[0] ?? null,
     notified_at:  new Date().toISOString(),
   }, { onConflict: 'id' });

@@ -216,8 +216,8 @@ function AlertComposer() {
               : <>📎 แนบรูปภาพ</>}
           </button>
         ) : (
-          <div className="relative rounded-xl overflow-hidden" style={{ border: '1.5px solid #e0eaff' }}>
-            <img src={image.preview} alt="preview" className="w-full object-cover" style={{ maxHeight: '160px' }} />
+          <div className="relative rounded-xl overflow-hidden" style={{ border: '1.5px solid #e0eaff', background: '#f8faff', minHeight: 100 }}>
+            <img src={image.preview} alt="preview" className="w-full object-contain" style={{ maxHeight: '220px' }} />
             <button onClick={() => { URL.revokeObjectURL(image.preview); setImage(null); }}
               className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center text-white"
               style={{ background: 'rgba(0,0,0,0.55)' }}>
