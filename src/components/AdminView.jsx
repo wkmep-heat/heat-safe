@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp, addDoc, where, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp, addDoc, writeBatch } from 'firebase/firestore';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -780,104 +780,6 @@ function ReportsInbox({ onNewCount }) {
   );
 }
 
-/* ── Seed test data ──────────────────────────────────────────────────────── */
-const SEED_TYPES = ['flood', 'accident', 'complain', 'rain', 'weather'];
-const SEED_DETAILS = {
-  flood:    'น้ำท่วมขังบริเวณนี้',
-  accident: 'เกิดอุบัติเหตุบนถนน',
-  complain: 'ร้องเรียนปัญหาในพื้นที่',
-  rain:     'ฝนตกหนักมองไม่เห็นทาง',
-  weather:  'อากาศร้อนจัดผิดปกติ',
-};
-const KK = { lat: 16.432, lng: 102.828 };
-
-function rand(min, max) { return min + Math.random() * (max - min); }
-
-function SeedPanel() {
-  const [seeding,  setSeeding]  = useState(false);
-  const [clearing, setClearing] = useState(false);
-  const [msg,      setMsg]      = useState(null);
-
-  const seed = async () => {
-    setSeeding(true); setMsg(null);
-    try {
-      const batch = writeBatch(db);
-      for (let i = 0; i < 50; i++) {
-        const type = SEED_TYPES[Math.floor(Math.random() * SEED_TYPES.length)];
-        const lat  = rand(KK.lat - 0.06, KK.lat + 0.06);
-        const lng  = rand(KK.lng - 0.06, KK.lng + 0.06);
-        const ref  = doc(collection(db, 'reports'));
-        batch.set(ref, {
-          lat, lng,
-          type,
-          detail:    SEED_DETAILS[type],
-          address:   `ทดสอบ (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
-          name:      'ทดสอบ',
-          phone:     'ไม่ระบุ',
-          status:    'new',
-          _seed:     true,
-          createdAt: serverTimestamp(),
-        });
-      }
-      await batch.commit();
-      setMsg({ ok: true, text: 'เพิ่ม 50 จุดแล้ว' });
-    } catch {
-      setMsg({ ok: false, text: 'เกิดข้อผิดพลาด' });
-    } finally {
-      setSeeding(false);
-    }
-  };
-
-  const clear = async () => {
-    setClearing(true); setMsg(null);
-    try {
-      const snap = await getDocs(query(collection(db, 'reports'), where('_seed', '==', true)));
-      const batch = writeBatch(db);
-      snap.docs.forEach(d => batch.delete(d.ref));
-      await batch.commit();
-      setMsg({ ok: true, text: `ลบ ${snap.size} จุดทดสอบแล้ว` });
-    } catch {
-      setMsg({ ok: false, text: 'เกิดข้อผิดพลาด' });
-    } finally {
-      setClearing(false);
-    }
-  };
-
-  return (
-    <div className="rounded-2xl p-4 space-y-3"
-      style={{ background: 'rgba(99,102,241,0.04)', border: '1.5px dashed rgba(99,102,241,0.3)' }}>
-      <p className="text-[11px] font-black text-indigo-500 uppercase tracking-wide">🧪 ข้อมูลทดสอบ Heat Map</p>
-      <div className="flex gap-2">
-        <button onClick={seed} disabled={seeding || clearing}
-          className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95"
-          style={{
-            background: 'linear-gradient(135deg,#6366f1,#4f46e5)',
-            color: 'white',
-            opacity: (seeding || clearing) ? 0.6 : 1,
-          }}>
-          {seeding ? '⏳ กำลังเพิ่ม...' : '+ เพิ่ม 50 จุด'}
-        </button>
-        <button onClick={clear} disabled={seeding || clearing}
-          className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95"
-          style={{
-            background: 'rgba(239,68,68,0.1)',
-            color: '#ef4444',
-            border: '1px solid rgba(239,68,68,0.3)',
-            opacity: (seeding || clearing) ? 0.6 : 1,
-          }}>
-          {clearing ? '⏳ กำลังลบ...' : '🗑️ ลบจุดทดสอบ'}
-        </button>
-      </div>
-      {msg && (
-        <p className="text-xs text-center font-semibold"
-          style={{ color: msg.ok ? '#059669' : '#ef4444' }}>
-          {msg.ok ? '✓' : '✗'} {msg.text}
-        </p>
-      )}
-    </div>
-  );
-}
-
 /* ── Dashboard (post-login) ──────────────────────────────────────────────── */
 function Dashboard({ onLogout }) {
   const [tab, setTab] = useState('reports');
@@ -961,10 +863,7 @@ function Dashboard({ onLogout }) {
 
       {/* Tab content */}
       {tab === 'reports' && (
-        <>
-          <SeedPanel />
-          <ReportsInbox onNewCount={setNewCount} />
-        </>
+        <ReportsInbox onNewCount={setNewCount} />
       )}
       {tab === 'community' && (
         <div className="relative" style={{ height: 'calc(100dvh - 160px)', overflow: 'hidden', borderRadius: 16 }}>
