@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  FaThermometerHalf, FaWind, FaFireAlt, FaSun, FaSearch, FaChevronLeft,
+  FaThermometerHalf, FaWind, FaFireAlt, FaSearch, FaChevronLeft,
   FaChevronRight, FaChevronUp, FaChevronDown, FaTimes, FaMapMarkerAlt, FaTint, FaLeaf,
   FaWater, FaSatelliteDish, FaSatellite, FaVideo, FaShieldAlt,
   FaRoad, FaGraduationCap, FaHome, FaBuilding, FaBell,
@@ -28,23 +28,6 @@ const LAYER_BUTTONS = [
   { id: 'building_density', label: 'ความหนาแน่นอาคาร',        icon: FaBuilding,        activeBg: 'rgba(180,83,9,0.10)',   activeBorder: 'rgba(180,83,9,0.4)',   iconColor: '#B45309' },
   { id: 'old_buildings',    label: 'อาคาร',                   icon: FaBuilding,        activeBg: 'rgba(245,158,11,0.10)',  activeBorder: 'rgba(245,158,11,0.4)',  iconColor: '#F59E0B' },
 ];
-
-/* ── Weather illustration SVG ── */
-function WeatherIllustration() {
-  return (
-    <svg width="72" height="60" viewBox="0 0 72 60" fill="none" aria-hidden="true">
-      <circle cx="50" cy="20" r="16" fill="#FEF3C7" opacity="0.5" />
-      <circle cx="50" cy="20" r="11" fill="#FDE68A" />
-      {[0,45,90,135,180,225,270,315].map((deg, i) => {
-        const r = Math.PI * deg / 180;
-        return <line key={i} x1={50+Math.cos(r)*14} y1={20+Math.sin(r)*14} x2={50+Math.cos(r)*18} y2={20+Math.sin(r)*18} stroke="#FBBF24" strokeWidth="1.5" strokeLinecap="round" opacity="0.7" />;
-      })}
-      <ellipse cx="22" cy="42" rx="18" ry="11" fill="white" opacity="0.92" />
-      <ellipse cx="37" cy="37" rx="15" ry="11" fill="white" opacity="0.88" />
-      <ellipse cx="51" cy="43" rx="13" ry="9"  fill="white" opacity="0.84" />
-    </svg>
-  );
-}
 
 /* ── Live badge ── */
 function LiveBadge({ status, lastUpdated, onRefresh }) {
@@ -438,9 +421,7 @@ export default function Sidebar({
 
   const avgTemp     = tambons.length > 0 ? (tambons.reduce((s,d)=>s+d.temperature,0)/tambons.length).toFixed(1) : '--';
   const avgHumidity = tambons.length > 0 ? Math.round(tambons.reduce((s,d)=>s+(d.humidity??0),0)/tambons.length) : '--';
-  const avgWind     = tambons.length > 0 ? (tambons.reduce((s,d)=>s+(d.windSpeed??0),0)/tambons.length).toFixed(1) : '--';
   const avgPM25     = tambons.length > 0 ? (tambons.reduce((s,d)=>s+d.pm25,0)/tambons.length).toFixed(1) : '--';
-  const dateStr = new Date().toLocaleDateString('th-TH', { weekday: 'short', month: 'short', day: 'numeric' });
 
   /* ─────────────────────── SHARED PROPS ─────────────────────── */
   const mapControlProps = { basemap, onBasemapChange };
@@ -610,55 +591,8 @@ export default function Sidebar({
           boxShadow: '4px 0 32px rgba(59,130,246,0.10)',
         }}
       >
-        {/* Desktop: full hero card */}
-        <div className="flex-shrink-0 px-4 pt-4 pb-3">
-          <div className="rounded-3xl p-4"
-            style={{
-              background: 'linear-gradient(135deg,#dbeafe 0%,#bfdbfe 55%,#93c5fd 100%)',
-              border: '1px solid rgba(147,197,253,0.5)',
-              boxShadow: '0 4px 20px rgba(59,130,246,0.12)',
-            }}>
-            <div className="flex items-start justify-between">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <FaMapMarkerAlt className="text-blue-500 flex-shrink-0" size={11} />
-                  <span className="text-blue-700 text-xs font-semibold truncate">แผนที่ขอนแก่น</span>
-                </div>
-                <p className="text-blue-600/70 text-[11px] mb-2">{dateStr}</p>
-                <div className="flex items-end gap-1.5">
-                  <span className="text-3xl font-black text-blue-900 leading-none">{avgTemp}°</span>
-                  <span className="text-blue-600 text-sm mb-0.5">C เฉลี่ย</span>
-                </div>
-              </div>
-              <WeatherIllustration />
-            </div>
-            <div className="mt-2.5 pt-2.5 border-t border-blue-200/60">
-              <LiveBadge status={weatherStatus} lastUpdated={lastUpdated} onRefresh={onRefreshWeather} />
-            </div>
-          </div>
-        </div>
-
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto px-4 pb-6 flex flex-col gap-4">
-
-          {/* Quick stats */}
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { icon: FaWind, label: 'ลม', value: avgWind, unit: 'km/h', color: '#3b82f6' },
-              { icon: FaTint, label: 'ความชื้น', value: avgHumidity, unit: '%', color: '#0ea5e9' },
-              { icon: FaSun,  label: 'UV', value: 'ปาน', unit: 'กลาง', color: '#f59e0b' },
-            ].map(s => {
-              const Icon = s.icon;
-              return (
-                <div key={s.label} className="rounded-2xl p-2.5 bg-white flex flex-col items-center gap-0.5"
-                  style={{ border: '1px solid #e0eaff' }}>
-                  <Icon size={14} style={{ color: s.color }} />
-                  <span className="text-slate-800 font-bold text-xs leading-none">{s.value}</span>
-                  <span className="text-[9px] text-slate-400 leading-none">{s.unit}</span>
-                </div>
-              );
-            })}
-          </div>
+        <div className="flex-1 overflow-y-auto px-4 pt-4 pb-6 flex flex-col gap-4">
 
           {/* Search */}
           <SearchBox {...searchProps} />

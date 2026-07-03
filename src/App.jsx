@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { KK_CENTER, KK_DEFAULT_ZOOM } from './data/mockData';
 import MapView from './components/MapView';
 import Sidebar from './components/Sidebar';
@@ -30,6 +30,10 @@ export default function App() {
   const [isTrack]       = useState(() => new URLSearchParams(window.location.search).has('track'));
   const [isTravelTime]  = useState(() => new URLSearchParams(window.location.search).has('traveltime'));
   const [isMap]         = useState(() => new URLSearchParams(window.location.search).has('map'));
+
+  useEffect(() => {
+    if (isMap) document.title = 'Smart Map';
+  }, [isMap]);
   const [activeTab, setActiveTab] = useState('home');
   const [activeLayers, setActiveLayers] = useState(new Set());
   const [infoLayer, setInfoLayer] = useState('temperature');
@@ -108,7 +112,7 @@ export default function App() {
   if (isTrack)      return <TrackView />;
   if (isTravelTime) return <TravelTimeView />;
   if (isMap) return (
-    <div className="relative w-full overflow-hidden" style={{ height: '100dvh' }}>
+    <div className="relative w-full overflow-hidden" style={{ height: '100dvh', '--nav-bottom': 'env(safe-area-inset-bottom, 0px)' }}>
       <div className="absolute right-0" style={{ top: 0, left: 'var(--nav-x)', bottom: 0 }}>
         <MapView
           activeLayers={activeLayers}
