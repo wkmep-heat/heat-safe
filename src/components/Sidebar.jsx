@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   FaThermometerHalf, FaWind, FaFireAlt, FaSun, FaSearch, FaChevronLeft,
-  FaChevronRight, FaChevronUp, FaChevronDown, FaTimes, FaMapMarkerAlt, FaTint, FaLeaf, FaEye,
-  FaEyeSlash, FaWater, FaSatelliteDish, FaSatellite, FaVideo, FaShieldAlt,
+  FaChevronRight, FaChevronUp, FaChevronDown, FaTimes, FaMapMarkerAlt, FaTint, FaLeaf,
+  FaWater, FaSatelliteDish, FaSatellite, FaVideo, FaShieldAlt,
   FaRoad, FaGraduationCap, FaHome, FaBuilding, FaBell,
 } from 'react-icons/fa';
 import {
@@ -385,7 +385,6 @@ export default function Sidebar({
   onFlyTo, selectedDistrict, onDistrictSelect,
   searchQuery, onSearchChange,
   isOpen, onToggle,
-  layerSettings, onLayerSettingChange,
   basemap, onBasemapChange,
   heatRiskFilter, onHeatRiskFilterChange,
 }) {
@@ -674,7 +673,6 @@ export default function Sidebar({
               {LAYER_BUTTONS.map(btn => {
                 const Icon = btn.icon;
                 const isActive = activeLayers?.has(btn.id) ?? false;
-                const settings = layerSettings?.[btn.id] ?? { visible: true, opacity: 0.75 };
                 return (
                   <div key={btn.id} className="rounded-2xl overflow-hidden bg-white transition-all duration-200"
                     style={{ border: `1.5px solid ${isActive ? btn.activeBorder : '#e0eaff'}`, boxShadow: isActive ? `0 0 12px ${btn.activeBorder}25` : 'none' }}>
@@ -728,24 +726,6 @@ export default function Sidebar({
                       </div>
                     )}
 
-                    {/* Opacity controls */}
-                    {isActive && btn.id !== 'heatrisk' && (
-                      <div className="flex items-center gap-2.5 px-3.5 py-2"
-                        style={{ background: `${btn.iconColor}06`, borderTop: `1px solid ${btn.activeBorder}` }}>
-                        <button onClick={() => onLayerSettingChange(btn.id,'visible',!settings.visible)}
-                          className="shrink-0 p-1 rounded-lg hover:bg-black/5 transition-colors">
-                          {settings.visible ? <FaEye size={12} style={{ color: btn.iconColor }} /> : <FaEyeSlash size={12} className="text-slate-400" />}
-                        </button>
-                        <input type="range" min={0} max={1} step={0.05} value={settings.opacity}
-                          disabled={!settings.visible}
-                          onChange={e => onLayerSettingChange(btn.id,'opacity',parseFloat(e.target.value))}
-                          className="flex-1 h-1 cursor-pointer disabled:cursor-not-allowed disabled:opacity-30"
-                          style={{ accentColor: btn.iconColor }} />
-                        <span className="text-[11px] font-mono w-8 text-right shrink-0" style={{ color: settings.visible ? btn.iconColor : '#94a3b8' }}>
-                          {Math.round(settings.opacity*100)}%
-                        </span>
-                      </div>
-                    )}
                   </div>
                 );
               })}
