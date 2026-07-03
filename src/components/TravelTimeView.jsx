@@ -12,8 +12,6 @@ import { MALLS } from '../data/mallData';
 import { PARKS } from '../data/parkData';
 import { SUGGESTED_PARKS } from '../data/suggestedParkData';
 
-const ORS_KEY = import.meta.env.VITE_ORS_KEY;
-
 const BASEMAPS = {
   light:     { label: 'สว่าง',    icon: '☀️', url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', attr: '© OpenStreetMap © CARTO' },
   satellite: { label: 'ดาวเทียม', icon: '🛰️', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr: 'Tiles © Esri' },
@@ -358,24 +356,16 @@ function SuggestedParkLayer({ onParkClick }) {
 }
 
 async function fetchIsochrones(lat, lng, profile, minutes) {
-  const res = await fetch(
-    `https://api.openrouteservice.org/v2/isochrones/${profile}`,
-    {
-      method: 'POST',
-      headers: { Authorization: ORS_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        locations: [[lng, lat]],
-        range: minutes.map(m => m * 60),
-        range_type: 'time',
-        smoothing: 0.5,
-      }),
-    }
-  );
+  const res = await fetch('/api/isochrone', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lat, lng, profile, minutes }),
+  });
+  const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `HTTP ${res.status}`);
+    throw new Error(data?.error || `HTTP ${res.status}`);
   }
-  return res.json();
+  return data;
 }
 
 export default function TravelTimeView() {
@@ -405,7 +395,6 @@ export default function TravelTimeView() {
   }, []);
 
   const runIsochrone = useCallback(async (latlng, name = null) => {
-    if (!ORS_KEY) { setError('ยังไม่ได้ตั้งค่า VITE_ORS_KEY ใน .env'); return; }
     if (times.length === 0) { setError('เลือกช่วงเวลาอย่างน้อย 1 รายการ'); return; }
 
     setOrigin(latlng);
