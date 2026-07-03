@@ -788,6 +788,119 @@ function ReportsInbox({ onNewCount }) {
   );
 }
 
+/* ── Reports table (แยกประเภท + ข้อมูลพื้นที่) ────────────────────────────── */
+function ReportsTable() {
+  const [reports, setReports] = useState([]);
+  const [filter,  setFilter]  = useState('all');
+
+  useEffect(() => {
+    const q = query(collection(db, 'reports'), orderBy('createdAt', 'desc'));
+    const unsub = onSnapshot(q, (snap) => {
+      setReports(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => r.source !== 'admin'));
+    });
+    return unsub;
+  }, []);
+
+  const counts = Object.keys(TYPE_STYLES).reduce((acc, id) => {
+    acc[id] = reports.filter(r => r.type === id).length;
+    return acc;
+  }, {});
+  const filtered = filter === 'all' ? reports : reports.filter(r => r.type === filter);
+
+  if (reports.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
+        <div className="text-4xl opacity-30">📋</div>
+        <p className="text-slate-400 text-sm">ยังไม่มีข้อมูลการแจ้งเหตุ</p>
+        <p className="text-slate-300 text-xs">ข้อมูลจะปรากฏที่นี่เมื่อมีผู้แจ้งเหตุผ่านลิ้งค์สาธารณะ</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Type filter / summary chips */}
+      <div className="flex gap-1.5 flex-wrap">
+        <button onClick={() => setFilter('all')}
+          className="text-[11px] font-bold px-3 py-1.5 rounded-full transition-all"
+          style={{
+            background: filter === 'all' ? '#1e293b' : 'white',
+            color:      filter === 'all' ? 'white' : '#64748b',
+            border:     `1.5px solid ${filter === 'all' ? '#1e293b' : '#e0eaff'}`,
+          }}>
+          ทั้งหมด ({reports.length})
+        </button>
+        {Object.entries(TYPE_STYLES).map(([id, t]) => (
+          <button key={id} onClick={() => setFilter(id)}
+            className="text-[11px] font-bold px-3 py-1.5 rounded-full transition-all"
+            style={{
+              background: filter === id ? t.color : 'white',
+              color:      filter === id ? 'white' : t.color,
+              border:     `1.5px solid ${t.color}${filter === id ? '' : '60'}`,
+            }}>
+            {t.icon} {t.label} ({counts[id] ?? 0})
+          </button>
+        ))}
+      </div>
+
+      {/* Data table */}
+      <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid #e0eaff' }}>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left" style={{ borderCollapse: 'collapse', minWidth: 560 }}>
+            <thead>
+              <tr style={{ background: 'rgba(99,102,241,0.06)' }}>
+                <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wide px-3 py-2.5 whitespace-nowrap">ประเภท</th>
+                <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wide px-3 py-2.5 whitespace-nowrap">พื้นที่</th>
+                <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wide px-3 py-2.5 whitespace-nowrap">รายละเอียด</th>
+                <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wide px-3 py-2.5 whitespace-nowrap">วันที่</th>
+                <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wide px-3 py-2.5 whitespace-nowrap">สถานะ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(r => {
+                const t  = TYPE_STYLES[r.type];
+                const st = STATUS_STYLES[r.status] ?? STATUS_STYLES.new;
+                return (
+                  <tr key={r.id} style={{ borderTop: '1px solid #f1f5f9' }}>
+                    <td className="px-3 py-2.5 whitespace-nowrap">
+                      {t && (
+                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+                          style={{ background: t.color + '18', color: t.color }}>
+                          {t.icon} {t.label}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2.5 text-xs text-slate-700" style={{ maxWidth: 180 }}>
+                      {r.lat && r.lng ? (
+                        <a href={`https://www.google.com/maps?q=${r.lat},${r.lng}`}
+                          target="_blank" rel="noopener noreferrer"
+                          className="hover:underline block truncate" title={r.address}>
+                          {r.address ?? `${r.lat.toFixed(5)}, ${r.lng.toFixed(5)}`}
+                        </a>
+                      ) : (
+                        <span className="block truncate">{r.address ?? '—'}</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2.5 text-xs text-slate-500 truncate" style={{ maxWidth: 220 }} title={r.detail}>
+                      {r.detail}
+                    </td>
+                    <td className="px-3 py-2.5 text-[11px] text-slate-400 whitespace-nowrap">{fmtDate(r.createdAt)}</td>
+                    <td className="px-3 py-2.5 whitespace-nowrap">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: st.bg, color: st.color }}>
+                        {st.label}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Dashboard (post-login) ──────────────────────────────────────────────── */
 function Dashboard({ onLogout }) {
   const [tab, setTab] = useState('reports');
@@ -826,9 +939,10 @@ function Dashboard({ onLogout }) {
       <div className="flex rounded-2xl overflow-hidden p-1 gap-1"
         style={{ background: 'rgba(255,255,255,0.7)', border: '1px solid #e0eaff' }}>
         {[
-          { id: 'reports',   label: 'รายงาน',    badge: newCount },
-          { id: 'community', label: 'ชุมชน',     badge: 0 },
-          { id: 'alert',     label: 'แจ้งเตือน', badge: 0 },
+          { id: 'reports',   label: 'รายงาน',      badge: newCount },
+          { id: 'table',     label: 'ตารางข้อมูล', badge: 0 },
+          { id: 'community', label: 'ชุมชน',       badge: 0 },
+          { id: 'alert',     label: 'แจ้งเตือน',   badge: 0 },
         ].map(t => (
           <button
             key={t.id}
@@ -873,6 +987,7 @@ function Dashboard({ onLogout }) {
       {tab === 'reports' && (
         <ReportsInbox onNewCount={setNewCount} />
       )}
+      {tab === 'table' && <ReportsTable />}
       {tab === 'community' && (
         <div className="relative" style={{ height: 'calc(100dvh - 160px)', overflow: 'hidden', borderRadius: 16 }}>
           <CommunityView />
