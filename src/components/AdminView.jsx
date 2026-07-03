@@ -1,5 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { collection, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp, addDoc, where, getDocs, writeBatch } from 'firebase/firestore';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { db } from '../firebase';
 import CommunityView from './CommunityView';
 
@@ -268,6 +271,223 @@ const TYPE_STYLES = {
   weather:  { label: 'สภาพอากาศ', icon: '⛅', color: '#64748b' },
 };
 
+/* ── Admin pin-drop (manual report entry) ────────────────────────────────── */
+const ADMIN_MAP_CENTER = { lat: 16.432, lng: 102.828 }; // ขอนแก่น
+
+function pinDivIcon(color, size = 26) {
+  const h = Math.round(size * 38 / 30);
+  return L.divIcon({
+    className: '',
+    html: `<div style="position:relative;width:${size}px;height:${h}px;filter:drop-shadow(0 3px 6px rgba(0,0,0,0.35))">
+      <svg width="${size}" height="${h}" viewBox="0 0 30 38" fill="none">
+        <path d="M15 0C6.716 0 0 6.716 0 15C0 25.5 15 38 15 38C15 38 30 25.5 30 15C30 6.716 23.284 0 15 0Z" fill="${color}"/>
+        <circle cx="15" cy="15" r="7" fill="white"/>
+      </svg>
+    </div>`,
+    iconSize: [size, h],
+    iconAnchor: [size / 2, h],
+  });
+}
+
+function PinDropMap({ onMapClick, queue }) {
+  useMapEvents({ click(e) { onMapClick(e.latlng.lat, e.latlng.lng); } });
+  return (
+    <>
+      {queue.map(p => (
+        <Marker key={p.id} position={[p.lat, p.lng]} icon={pinDivIcon(TYPE_STYLES[p.type]?.color ?? '#6366f1', 24)} />
+      ))}
+    </>
+  );
+}
+
+function AdminPinModal({ onClose }) {
+  const [reportType, setReportType] = useState('');
+  const [queue,      setQueue]      = useState([]); // [{ id, lat, lng, type, address }] ยังไม่บันทึก
+  const [saving,     setSaving]     = useState(false);
+  const [error,      setError]      = useState('');
+  const [totalSaved, setTotalSaved] = useState(0);
+  const [justSaved,  setJustSaved]  = useState(false);
+  const nextId = useRef(0);
+
+  const canSave = queue.length > 0 && !saving;
+
+  const handleMapClick = useCallback((lat, lng) => {
+    if (!reportType) { setError('กรุณาเลือกประเภทก่อนแตะปักหมุด'); return; }
+    setError('');
+    const id = nextId.current++;
+    setQueue(prev => [...prev, { id, lat, lng, type: reportType, address: `${lat.toFixed(5)}, ${lng.toFixed(5)}` }]);
+
+    fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=th`,
+      { headers: { 'User-Agent': 'KKMapHeat/1.0' } }
+    )
+      .then(r => r.json())
+      .then(data => {
+        if (!data.display_name) return;
+        const addr = data.display_name.split(',').slice(0, 3).join(',').trim();
+        setQueue(prev => prev.map(p => p.id === id ? { ...p, address: addr } : p));
+      })
+      .catch(() => {});
+  }, [reportType]);
+
+  const removeFromQueue = (id) => setQueue(prev => prev.filter(p => p.id !== id));
+
+  const saveAll = async () => {
+    if (!canSave) return;
+    setSaving(true); setError('');
+    try {
+      const batch = writeBatch(db);
+      queue.forEach(p => {
+        const ref = doc(collection(db, 'reports'));
+        batch.set(ref, {
+          lat:       p.lat,
+          lng:       p.lng,
+          address:   p.address,
+          detail:    TYPE_STYLES[p.type]?.label ?? '',
+          image:     null,
+          type:      p.type,
+          name:      'เจ้าหน้าที่',
+          phone:     'ไม่ระบุ',
+          status:    'read',
+          source:    'admin',
+          createdAt: serverTimestamp(),
+          readAt:    serverTimestamp(),
+        });
+      });
+      await batch.commit();
+      setTotalSaved(prev => prev + queue.length);
+      setQueue([]);
+      setJustSaved(true);
+      setTimeout(() => setJustSaved(false), 1800);
+    } catch {
+      setError('บันทึกไม่สำเร็จ กรุณาลองใหม่');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[2000] flex items-end sm:items-center justify-center px-0 sm:px-4"
+      style={{ background: 'rgba(15,23,42,0.55)' }}>
+      <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl bg-white flex flex-col"
+        style={{ maxHeight: '92dvh' }}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3.5 flex-shrink-0" style={{ borderBottom: '1px solid #e0eaff' }}>
+          <div>
+            <p className="font-black text-slate-800 text-sm">📍 ปักหมุดแจ้งเหตุเอง</p>
+            {totalSaved > 0 && (
+              <p className="text-[11px] font-semibold text-emerald-500 mt-0.5">✓ บันทึกไปแล้ว {totalSaved} จุด</p>
+            )}
+          </div>
+          <button onClick={onClose}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400"
+            style={{ background: 'rgba(148,163,184,0.15)' }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 px-4 py-4 space-y-4">
+          {/* Type selector */}
+          <div>
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-2">
+              เลือกประเภทก่อนแตะแผนที่ <span className="text-red-400">*</span>
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {Object.entries(TYPE_STYLES).map(([id, t]) => (
+                <button key={id} onClick={() => { setReportType(id); setError(''); }}
+                  className="flex flex-col items-center gap-1 py-2.5 rounded-2xl text-xs font-bold transition-all active:scale-95"
+                  style={{
+                    background: reportType === id ? t.color + '18' : 'white',
+                    border:     reportType === id ? `2px solid ${t.color}` : '1.5px solid #e0eaff',
+                    color:      reportType === id ? t.color : '#94a3b8',
+                  }}>
+                  <span style={{ fontSize: 20 }}>{t.icon}</span>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Mini map */}
+          <div>
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+              แตะบนแผนที่เพื่อปักหมุด · ปักได้หลายจุด {queue.length > 0 && `(เลือกไว้ ${queue.length} จุด)`}
+            </p>
+            <div className="rounded-2xl overflow-hidden" style={{ height: 220, border: '1.5px solid #e0eaff' }}>
+              <MapContainer center={[ADMIN_MAP_CENTER.lat, ADMIN_MAP_CENTER.lng]} zoom={12}
+                style={{ width: '100%', height: '100%' }}>
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution="&copy; OpenStreetMap contributors"
+                />
+                <PinDropMap onMapClick={handleMapClick} queue={queue} />
+              </MapContainer>
+            </div>
+          </div>
+
+          {/* Queue list */}
+          {queue.length > 0 && (
+            <div>
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+                รายการที่จะบันทึก ({queue.length})
+              </p>
+              <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                {queue.map(p => {
+                  const t = TYPE_STYLES[p.type];
+                  return (
+                    <div key={p.id} className="flex items-center gap-2 rounded-xl px-3 py-2"
+                      style={{ background: 'white', border: '1px solid #e0eaff' }}>
+                      <span style={{ fontSize: 16 }}>{t?.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold" style={{ color: t?.color }}>{t?.label}</p>
+                        <p className="text-[10px] text-slate-400 truncate">{p.address}</p>
+                      </div>
+                      <button onClick={() => removeFromQueue(p.id)}
+                        className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center"
+                        style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="rounded-xl px-4 py-3 text-sm font-semibold text-center"
+              style={{ background: 'rgba(239,68,68,0.1)', color: '#dc2626', border: '1px solid rgba(239,68,68,0.25)' }}>
+              {error}
+            </div>
+          )}
+        </div>
+
+        <div className="px-4 py-3.5 flex-shrink-0 flex gap-2" style={{ borderTop: '1px solid #e0eaff' }}>
+          {totalSaved > 0 && queue.length === 0 && (
+            <button onClick={onClose}
+              className="py-3.5 px-4 rounded-2xl font-bold text-sm transition-all active:scale-95 flex-shrink-0"
+              style={{ background: 'rgba(148,163,184,0.15)', color: '#64748b' }}>
+              เสร็จสิ้น
+            </button>
+          )}
+          <button onClick={saveAll} disabled={!canSave}
+            className="flex-1 py-3.5 rounded-2xl text-white font-black text-sm transition-all active:scale-95"
+            style={{
+              background: canSave ? 'linear-gradient(135deg,#6366f1,#4f46e5)' : 'rgba(148,163,184,0.4)',
+              cursor:     canSave ? 'pointer' : 'not-allowed',
+            }}>
+            {saving ? '⏳ กำลังบันทึก...' : justSaved ? '✓ บันทึกแล้ว' : `✓ บันทึกทั้งหมด (${queue.length})`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ReportCard({ r, onSetStatus, onDelete }) {
   const st = STATUS_STYLES[r.status] ?? STATUS_STYLES.new;
   const [replyOpen,    setReplyOpen]    = useState(false);
@@ -519,7 +739,7 @@ function ReportsInbox({ onNewCount }) {
   useEffect(() => {
     const q = query(collection(db, 'reports'), orderBy('createdAt', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const data = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => r.source !== 'admin');
       setReports(data);
       onNewCount?.(data.filter(r => r.status === 'new').length);
     });
@@ -662,9 +882,24 @@ function SeedPanel() {
 function Dashboard({ onLogout }) {
   const [tab, setTab] = useState('reports');
   const [newCount, setNewCount] = useState(0);
+  const [pinModalOpen, setPinModalOpen] = useState(false);
 
   return (
     <div className="flex flex-col gap-4 px-4 py-5 max-w-md mx-auto w-full">
+      {pinModalOpen && <AdminPinModal onClose={() => setPinModalOpen(false)} />}
+
+      {tab === 'reports' && (
+        <button onClick={() => setPinModalOpen(true)}
+          className="fixed z-[1500] flex items-center gap-2 px-4 py-3 rounded-full text-white font-bold text-xs transition-all active:scale-95"
+          style={{
+            right: '16px',
+            bottom: 'calc(20px + env(safe-area-inset-bottom, 0px))',
+            background: 'linear-gradient(135deg,#6366f1,#4f46e5)',
+            boxShadow: '0 8px 24px rgba(99,102,241,0.45)',
+          }}>
+          📍 ปักหมุดเอง
+        </button>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
