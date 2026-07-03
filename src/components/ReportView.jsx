@@ -5,11 +5,12 @@ import { db } from '../firebase';
 const IMGBB_KEY = import.meta.env.VITE_IMGBB_KEY || 'b48174b520f12cf5eb763cff034282cd';
 
 const REPORT_TYPES = [
+  { id: 'heat',     label: 'ความร้อน',    icon: '🔥', color: '#dc2626' },
+  { id: 'pm25',     label: 'ฝุ่น PM2.5',  icon: '😷', color: '#a855f7' },
+  { id: 'rain',     label: 'ฝนตก',        icon: '🌧️', color: '#0ea5e9' },
   { id: 'flood',    label: 'น้ำท่วม',     icon: '🌊', color: '#3b82f6' },
   { id: 'accident', label: 'อุบัติเหตุ',  icon: '🚨', color: '#ef4444' },
-  { id: 'complain', label: 'ร้องเรียน',   icon: '📢', color: '#f97316' },
-  { id: 'rain',     label: 'ฝนตก',        icon: '🌧️', color: '#0ea5e9' },
-  { id: 'weather',  label: 'สภาพอากาศ',  icon: '⛅', color: '#64748b' },
+  { id: 'other',    label: 'อื่นๆ',       icon: '📢', color: '#64748b' },
 ];
 
 async function uploadToImgBB(blob) {
@@ -218,7 +219,7 @@ export default function ReportView() {
 
   /* ── Form ── */
   return (
-    <div style={{ height: '100dvh', overflowY: 'auto', background: 'linear-gradient(160deg,#fff7ed 0%,#fef3c7 30%,#f8faff 100%)' }}>
+    <div style={{ height: '100dvh', overflowY: 'auto', background: 'linear-gradient(160deg,#fb923c 0%,#f87171 55%,#dc2626 100%)' }}>
       <div className="max-w-md mx-auto px-4 pt-8 pb-12 space-y-5">
 
         {/* Header */}
@@ -230,15 +231,15 @@ export default function ReportView() {
             </svg>
           </a>
           <div>
-            <p className="font-black text-slate-800 text-lg leading-tight">แจ้งเหตุ</p>
-            <p className="text-xs text-slate-400">ระบบติดตามสภาพแวดล้อม จ.ขอนแก่น</p>
+            <p className="font-black text-white text-lg leading-tight">แจ้งเหตุ</p>
+            <p className="text-xs text-white/70">ระบบติดตามสภาพแวดล้อม จ.ขอนแก่น</p>
           </div>
         </div>
 
         {/* Report type */}
         <div>
-          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-2">
-            ประเภทการแจ้งเตือน <span className="text-red-400">*</span>
+          <p className="text-[11px] font-bold text-white uppercase tracking-wide mb-2">
+            ประเภทการแจ้งเตือน <span className="text-red-200">*</span>
           </p>
           <div className="grid grid-cols-3 gap-2">
             {REPORT_TYPES.map(t => (
@@ -262,8 +263,8 @@ export default function ReportView() {
 
         {/* GPS Location */}
         <div>
-          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-2">
-            ตำแหน่งที่เกิดเหตุ <span className="text-red-400">*</span>
+          <p className="text-[11px] font-bold text-white uppercase tracking-wide mb-2">
+            ตำแหน่งที่เกิดเหตุ <span className="text-red-200">*</span>
           </p>
           {geoStatus !== 'ok' ? (
             <button onClick={getLocation} disabled={geoStatus === 'loading'}
@@ -308,7 +309,7 @@ export default function ReportView() {
 
         {/* Detail */}
         <div>
-          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">รายละเอียด <span className="text-red-400">*</span></p>
+          <p className="text-[11px] font-bold text-white uppercase tracking-wide mb-1.5">รายละเอียด <span className="text-red-200">*</span></p>
           <textarea
             value={detail} onChange={e => setDetail(e.target.value)}
             placeholder="อธิบายสิ่งที่พบ เช่น อุณหภูมิสูงมาก ผู้คนหน้ามืด มีควันสีดำ..."
@@ -321,12 +322,12 @@ export default function ReportView() {
               color: '#1e293b', lineHeight: 1.6,
             }}
           />
-          <p className="text-[10px] text-slate-400 text-right mt-0.5">{detail.length}/300</p>
+          <p className="text-[10px] text-white/70 text-right mt-0.5">{detail.length}/300</p>
         </div>
 
         {/* Image */}
         <div>
-          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-2">รูปภาพประกอบ <span className="text-red-400">*</span></p>
+          <p className="text-[11px] font-bold text-white uppercase tracking-wide mb-2">รูปภาพประกอบ <span className="text-red-200">*</span></p>
           <input ref={fileRef} type="file" accept="image/*" capture="environment"
             onChange={handleImageChange} className="hidden" />
           {!image?.preview ? (
@@ -388,7 +389,7 @@ export default function ReportView() {
           {loading ? '⏳ กำลังส่ง...' : '📢 ส่งการแจ้งเหตุ'}
         </button>
 
-        <p className="text-[10px] text-slate-400 text-center">ข้อมูลที่ส่งจะถูกส่งตรงถึงเจ้าหน้าที่ผู้รับผิดชอบ</p>
+        <p className="text-[10px] text-white/70 text-center">ข้อมูลที่ส่งจะถูกส่งตรงถึงเจ้าหน้าที่ผู้รับผิดชอบ</p>
       </div>
     </div>
   );

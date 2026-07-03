@@ -5,11 +5,12 @@ import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '../../firebase';
 
 const TYPE_META = {
+  heat:     { label: 'ความร้อน',    icon: '🔥', color: '#dc2626' },
+  pm25:     { label: 'ฝุ่น PM2.5',  icon: '😷', color: '#a855f7' },
+  rain:     { label: 'ฝนตก',        icon: '🌧️', color: '#0ea5e9' },
   flood:    { label: 'น้ำท่วม',     icon: '🌊', color: '#3b82f6' },
   accident: { label: 'อุบัติเหตุ',  icon: '🚨', color: '#ef4444' },
-  complain: { label: 'ร้องเรียน',   icon: '📢', color: '#f97316' },
-  rain:     { label: 'ฝนตก',        icon: '🌧️', color: '#0ea5e9' },
-  weather:  { label: 'สภาพอากาศ',  icon: '⛅', color: '#64748b' },
+  other:    { label: 'อื่นๆ',       icon: '📢', color: '#64748b' },
 };
 const DEFAULT_META = { label: 'แจ้งเหตุ', icon: '📍', color: '#64748b' };
 

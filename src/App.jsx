@@ -31,7 +31,7 @@ export default function App() {
   const [isTravelTime]  = useState(() => new URLSearchParams(window.location.search).has('traveltime'));
   const [isMap]         = useState(() => new URLSearchParams(window.location.search).has('map'));
   const [activeTab, setActiveTab] = useState('home');
-  const [activeLayers, setActiveLayers] = useState(new Set(['report_heat', 'suggested_parks']));
+  const [activeLayers, setActiveLayers] = useState(new Set());
   const [infoLayer, setInfoLayer] = useState('temperature');
   const [selectedDistrict, setSelectedDistrict] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');

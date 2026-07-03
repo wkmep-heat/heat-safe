@@ -264,11 +264,12 @@ const STATUS_STYLES = {
 };
 
 const TYPE_STYLES = {
+  heat:     { label: 'ความร้อน',   icon: '🔥', color: '#dc2626' },
+  pm25:     { label: 'ฝุ่น PM2.5', icon: '😷', color: '#a855f7' },
+  rain:     { label: 'ฝนตก',       icon: '🌧️', color: '#0ea5e9' },
   flood:    { label: 'น้ำท่วม',    icon: '🌊', color: '#3b82f6' },
   accident: { label: 'อุบัติเหตุ', icon: '🚨', color: '#ef4444' },
-  complain: { label: 'ร้องเรียน',  icon: '📢', color: '#f97316' },
-  rain:     { label: 'ฝนตก',       icon: '🌧️', color: '#0ea5e9' },
-  weather:  { label: 'สภาพอากาศ', icon: '⛅', color: '#64748b' },
+  other:    { label: 'อื่นๆ',      icon: '📢', color: '#64748b' },
 };
 
 /* ── Admin pin-drop (manual report entry) ────────────────────────────────── */
