@@ -419,8 +419,16 @@ function AdminPinModal({ onClose }) {
               <MapContainer center={[ADMIN_MAP_CENTER.lat, ADMIN_MAP_CENTER.lng]} zoom={12}
                 style={{ width: '100%', height: '100%' }}>
                 <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution="&copy; OpenStreetMap contributors"
+                  url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                  attribution="Tiles &copy; Esri"
+                  maxZoom={19}
+                  maxNativeZoom={19}
+                />
+                <TileLayer
+                  url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
+                  attribution=""
+                  maxZoom={19}
+                  maxNativeZoom={19}
                 />
                 <PinDropMap onMapClick={handleMapClick} queue={queue} />
               </MapContainer>
