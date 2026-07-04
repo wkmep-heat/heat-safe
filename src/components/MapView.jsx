@@ -403,7 +403,7 @@ function TambonPinMarker({ pin }) {
   );
 }
 
-export default function MapView({ activeLayers, tambons, selectedDistrict, onDistrictClick, onMapClick, forecastDatetime, layerSettings, selectedMonth, flyToTarget, initialCenter, initialZoom, onMapMove, mapPin, basemap = 'satellite', heatRiskFilter = 'all' }) {
+export default function MapView({ activeLayers, tambons, selectedDistrict, onDistrictClick, onMapClick, forecastDatetime, layerSettings, selectedMonth, flyToTarget, initialCenter, initialZoom, onMapMove, mapPin, basemap = 'satellite', onBasemapChange, heatRiskFilter = 'all', reportHeatView = { heatmap: true, pins: true } }) {
   const [tempPoint, setTempPoint] = useState(null);
   const [himawariband, setHimawariband] = useState('ir');
   /* basemap + showMapBox are now controlled by parent */
@@ -540,9 +540,33 @@ export default function MapView({ activeLayers, tambons, selectedDistrict, onDis
           <KMZLayer key={def.id} url={def.url} color={def.color} weight={def.weight} opacity={s(def.id).opacity} />
         ))}
 
-        {has('report_heat') && <ReportPinsLayer />}
+        {has('report_heat') && (
+          <ReportPinsLayer showHeatmap={reportHeatView.heatmap} showPins={reportHeatView.pins} />
+        )}
         {has('suggested_parks') && <SuggestedParkLayer />}
       </MapContainer>
+
+      {/* Floating basemap switcher — bottom-right, above zoom control */}
+      {onBasemapChange && (
+        <div className="absolute z-[1000] flex flex-col rounded-xl overflow-hidden shadow-lg"
+          style={{ bottom: '96px', right: '10px', background: 'rgba(255,255,255,0.97)', border: '1px solid #e0eaff' }}>
+          {['street', 'satellite'].map((id, i, arr) => {
+            const opt = BASEMAPS[id];
+            const active = basemap === id;
+            return (
+              <button key={id} onClick={() => onBasemapChange(id)} title={opt.label}
+                className="w-9 h-9 flex items-center justify-center transition-colors"
+                style={{
+                  background:    active ? 'rgba(99,102,241,0.1)' : 'transparent',
+                  color:         active ? '#4f46e5' : '#64748b',
+                  borderBottom:  i < arr.length - 1 ? '1px solid #e0eaff' : 'none',
+                }}>
+                {opt.icon}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
     </div>
   );

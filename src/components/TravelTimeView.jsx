@@ -10,7 +10,6 @@ import { CAFES } from '../data/cafeData';
 import { HOSPITALS } from '../data/hospitalData';
 import { MALLS } from '../data/mallData';
 import { PARKS } from '../data/parkData';
-import { SUGGESTED_PARKS } from '../data/suggestedParkData';
 
 const BASEMAPS = {
   light:     { label: 'สว่าง',    icon: '☀️', url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', attr: '© OpenStreetMap © CARTO' },
@@ -321,41 +320,6 @@ function SchoolLayer({ onSchoolClick }) {
   return null;
 }
 
-const suggestedParkIcon = L.divIcon({
-  className: '',
-  html: `<div style="
-    width:28px;height:28px;border-radius:50%;
-    background:#fff;border:2.5px dashed #16a34a;
-    display:flex;align-items:center;justify-content:center;
-    box-shadow:0 2px 6px rgba(0,0,0,0.15);
-    font-size:15px;cursor:pointer;">🌿</div>`,
-  iconSize: [28, 28],
-  iconAnchor: [14, 14],
-});
-
-function SuggestedParkLayer({ onParkClick }) {
-  const map = useMap();
-  const layerRef = useRef(null);
-
-  useEffect(() => {
-    const lyr = L.markerClusterGroup({ maxClusterRadius: 40, disableClusteringAtZoom: 16 });
-    SUGGESTED_PARKS.forEach(p => {
-      const marker = L.marker([p.lat, p.lng], { icon: suggestedParkIcon });
-      marker.bindTooltip(`แนะนำสวนสาธารณะ #${p.id}`, { direction: 'top', offset: [0, -14] });
-      marker.on('click', (e) => {
-        L.DomEvent.stopPropagation(e);
-        onParkClick({ lat: p.lat, lng: p.lng }, `แนะนำสวนสาธารณะ #${p.id}`);
-      });
-      lyr.addLayer(marker);
-    });
-    lyr.addTo(map);
-    layerRef.current = lyr;
-    return () => { map.removeLayer(lyr); layerRef.current = null; };
-  }, [map, onParkClick]);
-
-  return null;
-}
-
 /* ค่าประมาณความเร็วเฉลี่ยในเมือง (กม./ชม.) ใช้คำนวณรัศมีวงกลมแทนการเรียก routing API ภายนอก */
 const AVG_SPEED_KMH = {
   'driving-car':     30,
@@ -406,7 +370,6 @@ export default function TravelTimeView() {
   const [showHospitals, setShowHospitals] = useState(false);
   const [showMalls, setShowMalls]         = useState(false);
   const [showParks, setShowParks]             = useState(false);
-  const [showSuggestedParks, setShowSuggestedParks] = useState(false);
   const [basemap, setBasemap]             = useState('street');
   const geojsonKey = useRef(0);
 
@@ -450,7 +413,6 @@ export default function TravelTimeView() {
   const handleHospitalClick = useCallback((latlng, name) => runIsochrone(latlng, name), [runIsochrone]);
   const handleMallClick     = useCallback((latlng, name) => runIsochrone(latlng, name), [runIsochrone]);
   const handleParkClick          = useCallback((latlng, name) => runIsochrone(latlng, name), [runIsochrone]);
-  const handleSuggestedParkClick = useCallback((latlng, name) => runIsochrone(latlng, name), [runIsochrone]);
 
   const styleFeature = useCallback((feature) => {
     const seconds = feature.properties?.value ?? 0;
@@ -472,7 +434,6 @@ export default function TravelTimeView() {
     { key: 'malls',     icon: '🛍️', label: 'ห้าง',       state: showMalls,     toggle: () => setShowMalls(v => !v) },
     { key: 'hospitals', icon: '🏥', label: 'โรงพยาบาล', state: showHospitals, toggle: () => setShowHospitals(v => !v) },
     { key: 'cafes',          icon: '☕', label: 'คาเฟ่',         state: showCafes,          toggle: () => setShowCafes(v => !v) },
-    { key: 'suggestedParks', icon: '🌿', label: 'สวนแนะนำ',      state: showSuggestedParks, toggle: () => setShowSuggestedParks(v => !v) },
   ];
 
   return (
@@ -496,8 +457,7 @@ export default function TravelTimeView() {
         {showCafes     && <CafeLayer     onCafeClick={handleCafeClick} />}
         {showHospitals && <HospitalLayer onHospitalClick={handleHospitalClick} />}
         {showMalls     && <MallLayer     onMallClick={handleMallClick} />}
-        {showParks          && <ParkLayer          onParkClick={handleParkClick} />}
-        {showSuggestedParks && <SuggestedParkLayer onParkClick={handleSuggestedParkClick} />}
+        {showParks && <ParkLayer onParkClick={handleParkClick} />}
         {geojson && (
           <GeoJSON
             key={geojsonKey.current}

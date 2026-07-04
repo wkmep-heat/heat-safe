@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  FaThermometerHalf, FaWind, FaFireAlt, FaSearch, FaChevronLeft,
-  FaChevronRight, FaChevronUp, FaChevronDown, FaTimes, FaMapMarkerAlt, FaTint, FaLeaf,
+  FaThermometerHalf, FaWind, FaFireAlt, FaSearch, FaBars,
+  FaTimes, FaMapMarkerAlt, FaTint, FaLeaf,
   FaWater, FaSatelliteDish, FaSatellite, FaVideo, FaShieldAlt,
   FaRoad, FaGraduationCap, FaHome, FaBuilding, FaBell,
 } from 'react-icons/fa';
@@ -242,37 +242,11 @@ function InfoCard({ selectedDistrict, activeLayer, onClear, tambons }) {
   );
 }
 
-/* ═══════════════════════════════ MAP CONTROLS ═══════════════════════════════ */
-function MapControls({ basemap, onBasemapChange }) {
-  return (
-    <div>
-      <label className="block text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-2">แผนที่</label>
-      <div className="flex rounded-xl overflow-hidden bg-white" style={{ border: '1px solid #e0eaff' }}>
-        {BASEMAP_OPTIONS.map((opt, i) => (
-          <button
-            key={opt.id}
-            onClick={() => onBasemapChange(opt.id)}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[12px] font-medium transition-all duration-200"
-            style={{
-              background: basemap === opt.id ? 'rgba(99,102,241,0.08)' : 'transparent',
-              color: basemap === opt.id ? '#4f46e5' : '#94a3b8',
-              borderRight: i === 0 ? '1px solid #e0eaff' : 'none',
-            }}
-          >
-            <span style={{ color: basemap === opt.id ? '#4f46e5' : '#94a3b8' }}>{opt.icon}</span>
-            {opt.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 /* ═══════════════════════════════ SHARED SEARCH ═══════════════════════════════ */
 function SearchBox({ searchQuery, onSearchChange, filtered, externalResults, externalLoading, showSuggestions, setShowSuggestions, onSuggestionClick, onExternalClick, searchRef }) {
   return (
     <div ref={searchRef} className="relative">
-      <label className="block text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1.5">ค้นหา</label>
       <div className="relative">
         <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-300" size={11} />
         <input
@@ -339,22 +313,6 @@ function SearchBox({ searchQuery, onSearchChange, filtered, externalResults, ext
 }
 
 /* ═══════════════════════════════ MAIN SIDEBAR ═══════════════════════════════ */
-const BASEMAP_OPTIONS = [
-  { id: 'satellite', label: 'ดาวเทียม', icon: (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/>
-      <line x1="4.93" y1="4.93" x2="9.17" y2="9.17"/><line x1="14.83" y1="14.83" x2="19.07" y2="19.07"/>
-      <line x1="14.83" y1="9.17" x2="19.07" y2="4.93"/><line x1="4.93" y1="19.07" x2="9.17" y2="14.83"/>
-    </svg>
-  )},
-  { id: 'street', label: 'แผนที่', icon: (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
-      <line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>
-    </svg>
-  )},
-];
-
 const HEAT_RISK_FILTERS = [
   { id: 'all',  label: 'ทั้งหมด' },
   { id: 'high', label: '🔴 สูง' },
@@ -368,13 +326,27 @@ export default function Sidebar({
   onFlyTo, selectedDistrict, onDistrictSelect,
   searchQuery, onSearchChange,
   isOpen, onToggle,
-  basemap, onBasemapChange,
   heatRiskFilter, onHeatRiskFilterChange,
+  reportHeatView = { heatmap: true, pins: true }, onReportHeatViewChange,
 }) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [externalResults, setExternalResults] = useState([]);
   const [externalLoading, setExternalLoading] = useState(false);
+  const [locating, setLocating] = useState(false);
   const searchRef = useRef(null);
+
+  const handleLocateMe = useCallback(() => {
+    if (!navigator.geolocation) return;
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        onFlyTo({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setLocating(false);
+      },
+      () => setLocating(false),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }, [onFlyTo]);
 
   /* responsive: true = phone/tablet (<lg) */
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 1024);
@@ -424,7 +396,6 @@ export default function Sidebar({
   const avgPM25     = tambons.length > 0 ? (tambons.reduce((s,d)=>s+d.pm25,0)/tambons.length).toFixed(1) : '--';
 
   /* ─────────────────────── SHARED PROPS ─────────────────────── */
-  const mapControlProps = { basemap, onBasemapChange };
   const searchProps = {
     searchQuery, onSearchChange, filtered, externalResults, externalLoading,
     showSuggestions, setShowSuggestions,
@@ -439,15 +410,20 @@ export default function Sidebar({
   if (isMobile) {
     return (
       <>
+        {/* Tap-outside-to-close backdrop */}
+        {isOpen && (
+          <div className="fixed inset-0 z-[1000]" onClick={onToggle} aria-hidden="true" />
+        )}
+
         {/* Bottom sheet panel */}
         <aside
-          className="fixed left-0 right-0 z-[999] flex flex-col sidebar-transition"
+          className="fixed left-0 right-0 z-[1002] flex flex-col sidebar-transition"
           style={{
             bottom: 'var(--nav-bottom, 52px)',
-            height: 'calc(100dvh / 3)',
+            height: isOpen ? 'calc(100dvh - var(--nav-bottom, 52px) - 12px)' : 'calc(100dvh / 3)',
             borderRadius: '20px 20px 0 0',
             transform: isOpen ? 'translateY(0)' : 'translateY(100%)',
-            pointerEvents: 'auto',
+            pointerEvents: isOpen ? 'auto' : 'none',
             background: '#f8faff',
             backdropFilter: 'blur(24px)',
             WebkitBackdropFilter: 'blur(24px)',
@@ -456,34 +432,6 @@ export default function Sidebar({
             overflow: 'visible',
           }}
         >
-          {/* Toggle tab — sticks out above the sheet, always visible */}
-          <button
-            onClick={onToggle}
-            aria-label="Toggle layer panel"
-            style={{
-              position: 'absolute',
-              top: '-28px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: '64px',
-              height: '28px',
-              borderRadius: '14px 14px 0 0',
-              background: 'rgba(255,255,255,0.97)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
-              border: '1px solid #e0eaff',
-              borderBottom: 'none',
-              boxShadow: '0 -2px 12px rgba(59,130,246,0.1)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {isOpen
-              ? <FaChevronDown className="text-blue-400" size={11} />
-              : <FaChevronUp   className="text-blue-400" size={11} />}
-          </button>
-
           {/* Inner wrapper clips content to rounded corners */}
           <div className="flex flex-col flex-1 min-h-0" style={{ borderRadius: '20px 20px 0 0', overflow: 'hidden', background: '#f8faff' }}>
 
@@ -505,9 +453,6 @@ export default function Sidebar({
                 </div>
               </div>
             )}
-
-            {/* Map controls */}
-            <MapControls {...mapControlProps} />
 
             {/* Layer buttons */}
             <div>
@@ -538,14 +483,44 @@ export default function Sidebar({
                   );
                 })}
               </div>
+              {activeLayers?.has('report_heat') && (
+                <div className="flex gap-1.5 mt-2">
+                  {[['heatmap', 'ฮีทแมพ'], ['pins', 'จุดปักหมุด']].map(([key, label]) => (
+                    <button key={key} onClick={() => onReportHeatViewChange?.(key)}
+                      className="flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all"
+                      style={{
+                        background: reportHeatView[key] ? '#ef4444' : 'rgba(0,0,0,0.05)',
+                        color: reportHeatView[key] ? '#fff' : '#64748b',
+                      }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-
-            {/* Search */}
-            <SearchBox {...searchProps} />
 
           </div>
           </div>{/* end inner wrapper */}
         </aside>
+
+        {/* Floating search bar — Longdo-style, always visible */}
+        <div className="fixed z-[1001] flex items-start gap-2" style={{ top: '12px', left: '12px', right: '12px' }}>
+          <div className="flex-1 rounded-2xl p-1 flex items-center gap-1"
+            style={{ background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid #e0eaff', boxShadow: '0 8px 24px rgba(59,130,246,0.15)' }}>
+            <button onClick={onToggle} aria-label="Toggle layer panel"
+              className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ color: '#3b82f6' }}>
+              <FaBars size={15} />
+            </button>
+            <div className="flex-1 min-w-0">
+              <SearchBox {...searchProps} />
+            </div>
+          </div>
+          <button onClick={handleLocateMe} disabled={locating} title="ตำแหน่งของฉัน"
+            className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
+            style={{ background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid #e0eaff', boxShadow: '0 8px 24px rgba(59,130,246,0.15)', color: '#3b82f6', opacity: locating ? 0.6 : 1 }}>
+            <FaMapMarkerAlt size={16} />
+          </button>
+        </div>
       </>
     );
   }
@@ -555,35 +530,21 @@ export default function Sidebar({
      ══════════════════════════════════════════════════════════════════════ */
   return (
     <>
-      {/* Left-edge toggle button */}
-      <button
-        onClick={onToggle}
-        className="fixed top-1/2 -translate-y-1/2 z-[1000] flex items-center justify-center w-7 h-16 rounded-r-2xl transition-all duration-300"
-        style={{
-          left: isOpen
-            ? 'calc(var(--nav-x, 0px) + min(300px, 78vw))'
-            : 'var(--nav-x, 0px)',
-          background: 'rgba(255,255,255,0.97)',
-          backdropFilter: 'blur(12px)',
-          border: '1px solid #e0eaff',
-          borderLeft: 'none',
-          boxShadow: '2px 0 12px rgba(59,130,246,0.1)',
-          transition: 'left 0.3s cubic-bezier(0.4,0,0.2,1)',
-        }}
-        aria-label="Toggle sidebar"
-      >
-        {isOpen ? <FaChevronLeft className="text-blue-400" size={11} /> : <FaChevronRight className="text-blue-400" size={11} />}
-      </button>
+      {/* Tap-outside-to-close backdrop */}
+      {isOpen && (
+        <div className="fixed inset-0 z-[1000]" onClick={onToggle} aria-hidden="true" />
+      )}
 
       {/* Panel */}
       <aside
-        className="fixed top-0 z-[999] flex flex-col sidebar-transition"
+        className="fixed top-0 z-[1002] flex flex-col sidebar-transition"
         style={{
           left: 'var(--nav-x, 0px)',
           width: 'min(300px, 78vw)',
           height: 'calc(100vh - var(--nav-bottom, 0px))',
           transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
           opacity: isOpen ? 1 : 0,
+          pointerEvents: isOpen ? 'auto' : 'none',
           background: '#f8faff',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
@@ -593,12 +554,6 @@ export default function Sidebar({
       >
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-4 pt-4 pb-6 flex flex-col gap-4">
-
-          {/* Search */}
-          <SearchBox {...searchProps} />
-
-          {/* Map controls */}
-          <MapControls {...mapControlProps} />
 
           {/* Layer controls */}
           <div>
@@ -660,6 +615,23 @@ export default function Sidebar({
                       </div>
                     )}
 
+                    {/* Report heat: heatmap / pins toggles */}
+                    {isActive && btn.id === 'report_heat' && (
+                      <div className="px-3.5 py-2 flex gap-1.5 flex-wrap"
+                        style={{ background: `${btn.iconColor}06`, borderTop: `1px solid ${btn.activeBorder}` }}>
+                        {[['heatmap', 'ฮีทแมพ'], ['pins', 'จุดปักหมุด']].map(([key, label]) => (
+                          <button key={key} onClick={() => onReportHeatViewChange?.(key)}
+                            className="px-2.5 py-1 rounded-full text-[10px] font-bold transition-all"
+                            style={{
+                              background: reportHeatView[key] ? btn.iconColor : 'rgba(0,0,0,0.05)',
+                              color: reportHeatView[key] ? '#fff' : '#64748b',
+                            }}>
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
                   </div>
                 );
               })}
@@ -706,6 +678,26 @@ export default function Sidebar({
           </p>
         </div>
       </aside>
+
+      {/* Floating search bar — Longdo-style, always visible regardless of drawer state */}
+      <div className="fixed z-[1001] flex items-start gap-2"
+        style={{ top: '16px', left: 'calc(var(--nav-x, 0px) + 16px)', width: 'min(340px, calc(100vw - var(--nav-x, 0px) - 32px))' }}>
+        <div className="flex-1 rounded-2xl p-1 flex items-center gap-1"
+          style={{ background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid #e0eaff', boxShadow: '0 8px 24px rgba(59,130,246,0.15)' }}>
+          <button onClick={onToggle} aria-label="Toggle layer panel"
+            className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ color: '#3b82f6' }}>
+            <FaBars size={15} />
+          </button>
+          <div className="flex-1 min-w-0">
+            <SearchBox {...searchProps} />
+          </div>
+        </div>
+        <button onClick={handleLocateMe} disabled={locating} title="ตำแหน่งของฉัน"
+          className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
+          style={{ background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid #e0eaff', boxShadow: '0 8px 24px rgba(59,130,246,0.15)', color: '#3b82f6', opacity: locating ? 0.6 : 1 }}>
+          <FaMapMarkerAlt size={16} />
+        </button>
+      </div>
     </>
   );
 }

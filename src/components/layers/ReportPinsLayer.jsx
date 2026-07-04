@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
-import { Marker, Popup } from 'react-leaflet';
+import { useEffect, useState, useRef } from 'react';
+import { Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import 'leaflet.heat';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '../../firebase';
 
@@ -14,18 +15,60 @@ const TYPE_META = {
 };
 const DEFAULT_META = { label: 'แจ้งเหตุ', icon: '📍', color: '#64748b' };
 
-function reportIcon(color) {
+const TYPE_INTENSITY = {
+  heat:     1.00,
+  accident: 1.00,
+  flood:    0.90,
+  pm25:     0.80,
+  rain:     0.70,
+  other:    0.60,
+};
+
+function ReportHeatOverlay({ reports }) {
+  const map = useMap();
+  const heatRef = useRef(null);
+
+  useEffect(() => {
+    if (!L.heatLayer) return;
+    heatRef.current = L.heatLayer([], {
+      radius:     22,
+      blur:       15,
+      maxZoom:    17,
+      max:        1.0,
+      minOpacity: 0.45,
+      gradient: {
+        0.0:  '#fef9c3',
+        0.3:  '#fde68a',
+        0.55: '#fb923c',
+        0.75: '#ef4444',
+        1.0:  '#7f1d1d',
+      },
+    }).addTo(map);
+    return () => {
+      if (heatRef.current) { map.removeLayer(heatRef.current); heatRef.current = null; }
+    };
+  }, [map]);
+
+  useEffect(() => {
+    if (!heatRef.current) return;
+    const points = reports.map(r => [r.lat, r.lng, TYPE_INTENSITY[r.type] ?? 0.75]);
+    heatRef.current.setLatLngs(points);
+  }, [reports]);
+
+  return null;
+}
+
+function reportIcon(color, size = 10) {
   return L.divIcon({
     className: '',
-    html: `<div style="position:relative;width:28px;height:36px;filter:drop-shadow(0 3px 6px rgba(0,0,0,0.35))">
-      <svg width="28" height="36" viewBox="0 0 30 38" fill="none">
-        <path d="M15 0C6.716 0 0 6.716 0 15C0 25.5 15 38 15 38C15 38 30 25.5 30 15C30 6.716 23.284 0 15 0Z" fill="${color}"/>
-        <circle cx="15" cy="15" r="10" fill="white"/>
-      </svg>
-    </div>`,
-    iconSize:    [28, 36],
-    iconAnchor:  [14, 36],
-    popupAnchor: [0, -38],
+    html: `<div style="
+      width:${size}px;height:${size}px;border-radius:50%;
+      background:${color};border:1.5px solid #fff;
+      box-shadow:0 1px 3px rgba(0,0,0,0.45);
+    "></div>`,
+    iconSize:    [size, size],
+    iconAnchor:  [size / 2, size / 2],
+    popupAnchor: [0, -(size / 2 + 4)],
   });
 }
 
@@ -37,7 +80,7 @@ function fmtDate(ts) {
   });
 }
 
-export default function ReportPinsLayer() {
+export default function ReportPinsLayer({ showHeatmap = true, showPins = true }) {
   const [reports, setReports] = useState([]);
 
   useEffect(() => {
@@ -54,7 +97,8 @@ export default function ReportPinsLayer() {
 
   return (
     <>
-      {reports.map(r => {
+      {showHeatmap && <ReportHeatOverlay reports={reports} />}
+      {showPins && reports.map(r => {
         const meta = TYPE_META[r.type] ?? DEFAULT_META;
         return (
           <Marker key={r.id} position={[r.lat, r.lng]} icon={reportIcon('#ef4444')}>

@@ -18,6 +18,7 @@ import TrackView from './components/TrackView';
 import TravelTimeView from './components/TravelTimeView';
 import WelcomePopup from './components/WelcomePopup';
 import GuideModal from './components/GuideModal';
+import MapGuideModal from './components/MapGuideModal';
 
 export default function App() {
   const { tambons, forecast, dailyMax: omDailyMax, dailyMin: omDailyMin, status: weatherStatus, lastUpdated, refresh: refreshWeather } = useRealtimeWeather();
@@ -71,8 +72,12 @@ export default function App() {
   const [mapPosition, setMapPosition] = useState({ center: KK_CENTER, zoom: KK_DEFAULT_ZOOM });
   const handleMapMove = useCallback((center, zoom) => setMapPosition({ center, zoom }), []);
 
-  const [basemap, setBasemap] = useState('satellite');
+  const [basemap, setBasemap] = useState('street');
   const [heatRiskFilter, setHeatRiskFilter] = useState('all');
+  const [reportHeatView, setReportHeatView] = useState({ heatmap: true, pins: true });
+  const toggleReportHeatView = useCallback((key) => {
+    setReportHeatView(prev => ({ ...prev, [key]: !prev[key] }));
+  }, []);
 
   const [mapPin, setMapPin] = useState(null);
   const [flyToTarget, setFlyToTarget] = useState(null);
@@ -108,11 +113,21 @@ export default function App() {
 
   const onMap = !isAdmin && !isReport && activeTab === 'map';
 
+  const [showMapGuide, setShowMapGuide] = useState(false);
+  useEffect(() => {
+    if (!isMap && !onMap) return;
+    const key = 'map_guide_shown';
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, '1');
+    const t = setTimeout(() => setShowMapGuide(true), 500);
+    return () => clearTimeout(t);
+  }, [isMap, onMap]);
+
   if (isReport)     return <ReportView />;
   if (isTrack)      return <TrackView />;
   if (isTravelTime) return <TravelTimeView />;
   if (isMap) return (
-    <div className="relative w-full overflow-hidden" style={{ height: '100dvh', '--nav-bottom': 'env(safe-area-inset-bottom, 0px)' }}>
+    <div className="relative w-full overflow-hidden" style={{ height: '100dvh', '--nav-bottom': 'env(safe-area-inset-bottom, 0px)', '--nav-x': '0px' }}>
       <div className="absolute right-0" style={{ top: 0, left: 'var(--nav-x)', bottom: 0 }}>
         <MapView
           activeLayers={activeLayers}
@@ -129,7 +144,9 @@ export default function App() {
           onMapMove={handleMapMove}
           mapPin={mapPin}
           basemap={basemap}
+          onBasemapChange={setBasemap}
           heatRiskFilter={heatRiskFilter}
+          reportHeatView={reportHeatView}
         />
       </div>
       <Sidebar
@@ -149,10 +166,10 @@ export default function App() {
         onToggle={() => setSidebarOpen(v => !v)}
         layerSettings={layerSettings}
         onLayerSettingChange={updateLayerSetting}
-        basemap={basemap}
-        onBasemapChange={setBasemap}
         heatRiskFilter={heatRiskFilter}
         onHeatRiskFilterChange={setHeatRiskFilter}
+        reportHeatView={reportHeatView}
+        onReportHeatViewChange={toggleReportHeatView}
       />
       {activeLayers.has('temperature') && (
         <ForecastTimePicker datetime={forecastDatetime} onChange={setForecastDatetime} sidebarOpen={sidebarOpen} />
@@ -160,6 +177,22 @@ export default function App() {
       {activeLayers.has('monthly_temp') && (
         <MonthPicker selectedMonth={selectedMonth} onChange={setSelectedMonth} sidebarOpen={sidebarOpen} />
       )}
+      {showMapGuide && <MapGuideModal onClose={() => setShowMapGuide(false)} />}
+      <button
+        onClick={() => setShowMapGuide(true)}
+        className="fixed z-[1000] flex items-center justify-center rounded-full shadow-lg transition-all hover:scale-110 active:scale-95"
+        style={{
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)',
+          right: '14px',
+          width: '36px',
+          height: '36px',
+          background: 'linear-gradient(135deg,#10b981,#3b82f6)',
+          boxShadow: '0 4px 16px rgba(16,185,129,0.45)',
+        }}
+        title="คู่มือหน้าแผนที่"
+      >
+        <span className="text-white font-black text-base leading-none select-none">?</span>
+      </button>
     </div>
   );
 
@@ -188,7 +221,9 @@ export default function App() {
               onMapMove={handleMapMove}
               mapPin={mapPin}
               basemap={basemap}
+              onBasemapChange={setBasemap}
               heatRiskFilter={heatRiskFilter}
+              reportHeatView={reportHeatView}
             />
           </div>
           <Sidebar
@@ -208,10 +243,10 @@ export default function App() {
             onToggle={() => setSidebarOpen(v => !v)}
             layerSettings={layerSettings}
             onLayerSettingChange={updateLayerSetting}
-            basemap={basemap}
-            onBasemapChange={setBasemap}
             heatRiskFilter={heatRiskFilter}
             onHeatRiskFilterChange={setHeatRiskFilter}
+            reportHeatView={reportHeatView}
+            onReportHeatViewChange={toggleReportHeatView}
           />
           {activeLayers.has('temperature') && (
             <ForecastTimePicker datetime={forecastDatetime} onChange={setForecastDatetime} sidebarOpen={sidebarOpen} />
@@ -219,6 +254,7 @@ export default function App() {
           {activeLayers.has('monthly_temp') && (
             <MonthPicker selectedMonth={selectedMonth} onChange={setSelectedMonth} sidebarOpen={sidebarOpen} />
           )}
+          {showMapGuide && <MapGuideModal onClose={() => setShowMapGuide(false)} />}
         </>
       )}
 
@@ -281,17 +317,17 @@ export default function App() {
       {/* ── Help button ── */}
       {!isAdmin && activeTab !== 'traveltime' && (
         <button
-          onClick={() => setShowGuide(true)}
+          onClick={() => onMap ? setShowMapGuide(true) : setShowGuide(true)}
           className="fixed z-[1000] flex items-center justify-center rounded-full shadow-lg transition-all hover:scale-110 active:scale-95"
           style={{
             bottom: 'calc(52px + env(safe-area-inset-bottom, 0px) + 12px)',
             right: '14px',
             width: '36px',
             height: '36px',
-            background: 'linear-gradient(135deg,#6366f1,#3b82f6)',
-            boxShadow: '0 4px 16px rgba(99,102,241,0.45)',
+            background: onMap ? 'linear-gradient(135deg,#10b981,#3b82f6)' : 'linear-gradient(135deg,#6366f1,#3b82f6)',
+            boxShadow: onMap ? '0 4px 16px rgba(16,185,129,0.45)' : '0 4px 16px rgba(99,102,241,0.45)',
           }}
-          title="คู่มือการใช้งาน"
+          title={onMap ? 'คู่มือหน้าแผนที่' : 'คู่มือการใช้งาน'}
         >
           <span className="text-white font-black text-base leading-none select-none">?</span>
         </button>
