@@ -3,6 +3,7 @@ import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 
 const COL = { high: '#d7191c', mid: '#f08a24', low: '#2c7bb6', flood: '#3858c6' };
+const DOT_COLOR = '#64748b';
 const RTH = { high: 'เสี่ยงสูง', mid: 'เสี่ยงปานกลาง', low: 'จุดเย็น / เสี่ยงต่ำ' };
 
 const HEAT = [
@@ -84,36 +85,8 @@ function FloodPopup({ p }) {
   );
 }
 
-export default function HeatRiskLayer({ filter = 'all', showFlood = true }) {
-  return (
-    <>
-      {HEAT
-        .filter(p => filter === 'all' || p.r === filter)
-        .map(p => (
-          <Marker
-            key={p.n}
-            position={[p.la, p.lo]}
-            icon={makeIcon(COL[p.r], p.r === 'high' ? 20 : 16)}
-          >
-            <Popup maxWidth={250} autoPan={false}>
-              <HeatPopup p={p} />
-            </Popup>
-          </Marker>
-        ))}
-
-      {showFlood && FLOOD.map(p => (
-        <Marker
-          key={p.n}
-          position={[p.la, p.lo]}
-          icon={makeIcon(COL.flood, 15)}
-        >
-          <Popup maxWidth={240} autoPan={false}>
-            <FloodPopup p={p} />
-          </Popup>
-        </Marker>
-      ))}
-    </>
-  );
+export default function HeatRiskLayer() {
+  return null;
 }
 
 export { HEAT, FLOOD, COL, RTH };

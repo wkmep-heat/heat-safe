@@ -19,9 +19,10 @@ const BASEMAPS = {
 };
 
 const MODES = [
-  { id: 'driving-car',     label: 'รถยนต์',    icon: '🚗' },
-  { id: 'foot-walking',    label: 'เดินเท้า',  icon: '🚶' },
-  { id: 'cycling-regular', label: 'จักรยาน',   icon: '🚲' },
+  { id: 'driving-car',     label: 'รถยนต์',       icon: '🚗' },
+  { id: 'motorcycle',      label: 'มอเตอร์ไซค์',  icon: '🏍️' },
+  { id: 'foot-walking',    label: 'เดินเท้า',     icon: '🚶' },
+  { id: 'cycling-regular', label: 'จักรยาน',      icon: '🚲' },
 ];
 
 const TIME_OPTIONS = [15, 30, 45, 60];
@@ -355,17 +356,39 @@ function SuggestedParkLayer({ onParkClick }) {
   return null;
 }
 
-async function fetchIsochrones(lat, lng, profile, minutes) {
-  const res = await fetch('/api/isochrone', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ lat, lng, profile, minutes }),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(data?.error || `HTTP ${res.status}`);
+/* ค่าประมาณความเร็วเฉลี่ยในเมือง (กม./ชม.) ใช้คำนวณรัศมีวงกลมแทนการเรียก routing API ภายนอก */
+const AVG_SPEED_KMH = {
+  'driving-car':     30,
+  'motorcycle':      35,
+  'foot-walking':    4.5,
+  'cycling-regular': 12,
+};
+
+function circlePolygon(lat, lng, radiusMeters, sides = 64) {
+  const EARTH_RADIUS = 6371000;
+  const latRad = lat * Math.PI / 180;
+  const coords = [];
+  for (let i = 0; i <= sides; i++) {
+    const angle = (i / sides) * 2 * Math.PI;
+    const dx = radiusMeters * Math.cos(angle);
+    const dy = radiusMeters * Math.sin(angle);
+    const dLat = (dy / EARTH_RADIUS) * (180 / Math.PI);
+    const dLng = (dx / (EARTH_RADIUS * Math.cos(latRad))) * (180 / Math.PI);
+    coords.push([lng + dLng, lat + dLat]);
   }
-  return data;
+  return coords;
+}
+
+function buildCircleIsochrones(lat, lng, profile, minutesList) {
+  const speedMps = ((AVG_SPEED_KMH[profile] ?? 30) * 1000) / 3600;
+  return {
+    type: 'FeatureCollection',
+    features: minutesList.map(m => ({
+      type: 'Feature',
+      properties: { value: m * 60 },
+      geometry: { type: 'Polygon', coordinates: [circlePolygon(lat, lng, speedMps * m * 60)] },
+    })),
+  };
 }
 
 export default function TravelTimeView() {
@@ -374,17 +397,16 @@ export default function TravelTimeView() {
   const [mode, setMode]             = useState('driving-car');
   const [times, setTimes]           = useState([15, 30]);
   const [geojson, setGeojson]       = useState(null);
-  const [loading, setLoading]       = useState(false);
   const [error, setError]           = useState(null);
   const [userLocation, setUserLocation]   = useState(null);
   const [locating, setLocating]           = useState(false);
   const [flyTarget, setFlyTarget]         = useState(null);
-  const [showSchools, setShowSchools] = useState(true);
-  const [showCafes, setShowCafes]         = useState(true);
-  const [showHospitals, setShowHospitals] = useState(true);
-  const [showMalls, setShowMalls]         = useState(true);
-  const [showParks, setShowParks]             = useState(true);
-  const [showSuggestedParks, setShowSuggestedParks] = useState(true);
+  const [showSchools, setShowSchools] = useState(false);
+  const [showCafes, setShowCafes]         = useState(false);
+  const [showHospitals, setShowHospitals] = useState(false);
+  const [showMalls, setShowMalls]         = useState(false);
+  const [showParks, setShowParks]             = useState(false);
+  const [showSuggestedParks, setShowSuggestedParks] = useState(false);
   const [basemap, setBasemap]             = useState('street');
   const geojsonKey = useRef(0);
 
@@ -394,24 +416,14 @@ export default function TravelTimeView() {
     );
   }, []);
 
-  const runIsochrone = useCallback(async (latlng, name = null) => {
+  const runIsochrone = useCallback((latlng, name = null) => {
     if (times.length === 0) { setError('เลือกช่วงเวลาอย่างน้อย 1 รายการ'); return; }
 
     setOrigin(latlng);
     setOriginName(name);
     setError(null);
-    setLoading(true);
-    setGeojson(null);
-
-    try {
-      const data = await fetchIsochrones(latlng.lat, latlng.lng, mode, times);
-      geojsonKey.current += 1;
-      setGeojson(data);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
+    geojsonKey.current += 1;
+    setGeojson(buildCircleIsochrones(latlng.lat, latlng.lng, mode, times));
   }, [mode, times]);
 
   const handleLocateMe = useCallback(() => {
@@ -504,7 +516,7 @@ export default function TravelTimeView() {
             <div className="flex-1 min-w-0">
               <div className="font-black text-sm leading-tight" style={{ color: '#1e293b' }}>Travel Time Map</div>
               <div className="text-[10px] truncate" style={{ color: '#94a3b8' }}>
-                {loading ? '⏳ กำลังคำนวณ...' : originName ? `📍 ${originName}` : 'แตะแผนที่หรือ marker เพื่อเลือกจุด'}
+                {originName ? `📍 ${originName}` : 'แตะแผนที่หรือ marker เพื่อเลือกจุด'}
               </div>
             </div>
             <button onClick={handleLocateMe} disabled={locating}
@@ -538,6 +550,11 @@ export default function TravelTimeView() {
           {error && (
             <div style={{ marginTop: 6, fontSize: 10, padding: '5px 10px', borderRadius: 8, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>
               {error}
+            </div>
+          )}
+          {origin && (
+            <div style={{ marginTop: 6, fontSize: 9, color: '#94a3b8' }}>
+              * ระยะทางประมาณจากความเร็วเฉลี่ย ไม่ใช่เส้นทางถนนจริง
             </div>
           )}
         </div>
