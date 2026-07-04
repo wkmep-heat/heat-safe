@@ -420,9 +420,9 @@ export default function Sidebar({
           className="fixed left-0 right-0 z-[1002] flex flex-col sidebar-transition"
           style={{
             bottom: 'var(--nav-bottom, 52px)',
-            height: isOpen ? 'calc(100dvh - var(--nav-bottom, 52px) - 12px)' : 'calc(100dvh / 3)',
+            height: isOpen ? '50dvh' : 'calc(100dvh / 3)',
             borderRadius: '20px 20px 0 0',
-            transform: isOpen ? 'translateY(0)' : 'translateY(100%)',
+            transform: isOpen ? 'translateY(0)' : 'translateY(calc(100% + var(--nav-bottom, 52px) + 20px))',
             pointerEvents: isOpen ? 'auto' : 'none',
             background: '#f8faff',
             backdropFilter: 'blur(24px)',
