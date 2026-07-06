@@ -15,6 +15,14 @@ const TYPE_META = {
 };
 const DEFAULT_META = { label: 'แจ้งเหตุ', icon: '📍', color: '#64748b' };
 
+/* หมุดที่แจ้งเข้ามาตั้งแต่จุดนี้เป็นต้นไปจะแยกสีตามหมวดหมู่ ส่วนหมุดเก่าก่อนหน้ายังคงเป็นสีแดงเหมือนเดิม */
+const CATEGORY_STYLE_CUTOFF = new Date('2026-07-06T00:00:00+07:00').getTime();
+
+function isNewReport(r) {
+  const ts = r.createdAt?.toDate ? r.createdAt.toDate().getTime() : (r.createdAt ? new Date(r.createdAt).getTime() : 0);
+  return ts >= CATEGORY_STYLE_CUTOFF;
+}
+
 const TYPE_INTENSITY = {
   heat:     1.00,
   accident: 1.00,
@@ -100,8 +108,9 @@ export default function ReportPinsLayer({ showHeatmap = true, showPins = true })
       {showHeatmap && <ReportHeatOverlay reports={reports} />}
       {showPins && reports.map(r => {
         const meta = TYPE_META[r.type] ?? DEFAULT_META;
+        const pinColor = isNewReport(r) ? meta.color : '#ef4444';
         return (
-          <Marker key={r.id} position={[r.lat, r.lng]} icon={reportIcon('#ef4444')}>
+          <Marker key={r.id} position={[r.lat, r.lng]} icon={reportIcon(pinColor)}>
             <Popup autoPan={false} closeButton className="temp-point-popup">
               <div style={{ fontFamily: 'Noto Sans Thai, Inter, sans-serif', minWidth: '180px', maxWidth: '220px', padding: '2px 0' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
@@ -113,10 +122,6 @@ export default function ReportPinsLayer({ showHeatmap = true, showPins = true })
                 )}
                 {r.detail && (
                   <div style={{ fontSize: 12, color: '#334155', lineHeight: 1.5, marginBottom: 6 }}>{r.detail}</div>
-                )}
-                {r.image && (
-                  <img src={r.image} alt="รูปประกอบ"
-                    style={{ width: '100%', borderRadius: 8, marginBottom: 6, maxHeight: 120, objectFit: 'cover' }} />
                 )}
                 <div style={{ fontSize: 9, color: '#cbd5e1' }}>{fmtDate(r.createdAt)}</div>
               </div>
