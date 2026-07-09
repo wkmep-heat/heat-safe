@@ -5,7 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import 'leaflet.markercluster';
-import { KK_CENTER, KK_DEFAULT_ZOOM, KK_BOUNDS } from '../data/mockData';
+import { KK_CENTER, KK_DEFAULT_ZOOM } from '../data/mockData';
 import { CAFES } from '../data/cafeData';
 import { HOSPITALS } from '../data/hospitalData';
 import { MALLS } from '../data/mallData';
@@ -76,18 +76,6 @@ function FlyTo({ latlng }) {
   }, [map, latlng]);
   return null;
 }
-
-const schoolIcon = L.divIcon({
-  className: '',
-  html: `<div style="
-    width:28px;height:28px;border-radius:50%;
-    background:#fff;border:2px solid #3b82f6;
-    display:flex;align-items:center;justify-content:center;
-    box-shadow:0 2px 6px rgba(0,0,0,0.15);
-    font-size:16px;cursor:pointer;">🏫</div>`,
-  iconSize: [28, 28],
-  iconAnchor: [14, 14],
-});
 
 const cafeIcon = L.divIcon({
   className: '',
@@ -234,92 +222,6 @@ function ParkLayer({ onParkClick }) {
   return null;
 }
 
-const SCHOOL_NAME_OVERRIDES = {
-  'โรงเรียนหนองแวงวิทยา': 'โรงเรียนเทศบาลวัดกลาง',
-};
-
-function kmlDocToGeoJson(doc) {
-  const features = [];
-  const parseCoords = t => (t || '').trim().split(/\s+/).map(c => {
-    const p = c.split(',');
-    return [parseFloat(p[0]), parseFloat(p[1])];
-  }).filter(([x, y]) => !isNaN(x) && !isNaN(y));
-
-  for (const pm of doc.getElementsByTagName('Placemark')) {
-    const name = pm.querySelector('name')?.textContent || '';
-    const ptc = pm.querySelector('Point coordinates');
-    if (ptc) {
-      const p = ptc.textContent.trim().split(',');
-      features.push({ type: 'Feature', properties: { name }, geometry: { type: 'Point', coordinates: [+p[0], +p[1]] } });
-    }
-  }
-  return { type: 'FeatureCollection', features };
-}
-
-function SchoolLayer({ onSchoolClick }) {
-  const map = useMap();
-  const layerRef = useRef(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      try {
-        const res = await fetch('/kmz/school.kmz');
-        if (!res.ok || cancelled) return;
-        const buf = await res.arrayBuffer();
-
-        let kmlText = null;
-        if (window.JSZip) {
-          const zip = await window.JSZip.loadAsync(buf);
-          for (const [fn, file] of Object.entries(zip.files)) {
-            if (fn.toLowerCase().endsWith('.kml')) { kmlText = await file.async('text'); break; }
-          }
-        }
-        if (!kmlText || cancelled) return;
-
-        const doc = new DOMParser().parseFromString(kmlText, 'text/xml');
-        const gj = window.toGeoJSON ? window.toGeoJSON.kml(doc) : kmlDocToGeoJson(doc);
-        if (cancelled) return;
-
-        const cluster = L.markerClusterGroup({ maxClusterRadius: 40, disableClusteringAtZoom: 16 });
-        const geoLayer = L.geoJSON(gj, {
-          filter: f => {
-            if (f.geometry?.type !== 'Point') return false;
-            const [lng, lat] = f.geometry.coordinates;
-            return lat >= KK_BOUNDS[0][0] && lat <= KK_BOUNDS[1][0]
-                && lng >= KK_BOUNDS[0][1] && lng <= KK_BOUNDS[1][1];
-          },
-          pointToLayer: (feature, ll) => {
-            const rawName = feature.properties?.name || 'โรงเรียน';
-            const name = SCHOOL_NAME_OVERRIDES[rawName] ?? rawName;
-            const marker = L.marker(ll, { icon: schoolIcon });
-            marker.bindTooltip(name, { direction: 'top', offset: [0, -14] });
-            marker.on('click', (e) => {
-              L.DomEvent.stopPropagation(e);
-              onSchoolClick({ lat: ll.lat, lng: ll.lng }, name);
-            });
-            return marker;
-          },
-        });
-        cluster.addLayer(geoLayer);
-        cluster.addTo(map);
-        layerRef.current = cluster;
-      } catch (e) {
-        console.warn('School KMZ load error:', e);
-      }
-    }
-
-    load();
-    return () => {
-      cancelled = true;
-      if (layerRef.current) { map.removeLayer(layerRef.current); layerRef.current = null; }
-    };
-  }, [map, onSchoolClick]);
-
-  return null;
-}
-
 /* ค่าประมาณความเร็วเฉลี่ยในเมือง (กม./ชม.) ใช้คำนวณรัศมีวงกลมแทนการเรียก routing API ภายนอก */
 const AVG_SPEED_KMH = {
   'driving-car':     30,
@@ -365,7 +267,6 @@ export default function TravelTimeView() {
   const [userLocation, setUserLocation]   = useState(null);
   const [locating, setLocating]           = useState(false);
   const [flyTarget, setFlyTarget]         = useState(null);
-  const [showSchools, setShowSchools] = useState(false);
   const [showCafes, setShowCafes]         = useState(false);
   const [showHospitals, setShowHospitals] = useState(false);
   const [showMalls, setShowMalls]         = useState(false);
@@ -408,7 +309,6 @@ export default function TravelTimeView() {
   }, []);
 
   const handleMapClick    = useCallback((latlng) => runIsochrone(latlng, null), [runIsochrone]);
-  const handleSchoolClick = useCallback((latlng, name) => runIsochrone(latlng, name), [runIsochrone]);
   const handleCafeClick     = useCallback((latlng, name) => runIsochrone(latlng, name), [runIsochrone]);
   const handleHospitalClick = useCallback((latlng, name) => runIsochrone(latlng, name), [runIsochrone]);
   const handleMallClick     = useCallback((latlng, name) => runIsochrone(latlng, name), [runIsochrone]);
@@ -429,7 +329,6 @@ export default function TravelTimeView() {
   }, []);
 
   const LAYERS = [
-    { key: 'schools',   icon: '🏫', label: 'โรงเรียน',  state: showSchools,   toggle: () => setShowSchools(v => !v) },
     { key: 'parks',     icon: '🌳', label: 'สวน',        state: showParks,     toggle: () => setShowParks(v => !v) },
     { key: 'malls',     icon: '🛍️', label: 'ห้าง',       state: showMalls,     toggle: () => setShowMalls(v => !v) },
     { key: 'hospitals', icon: '🏥', label: 'โรงพยาบาล', state: showHospitals, toggle: () => setShowHospitals(v => !v) },
@@ -453,7 +352,6 @@ export default function TravelTimeView() {
           <Marker position={userLocation} icon={userLocationIcon}
             eventHandlers={{ click: () => runIsochrone(userLocation, 'ตำแหน่งของฉัน') }} />
         )}
-        {showSchools   && <SchoolLayer   onSchoolClick={handleSchoolClick} />}
         {showCafes     && <CafeLayer     onCafeClick={handleCafeClick} />}
         {showHospitals && <HospitalLayer onHospitalClick={handleHospitalClick} />}
         {showMalls     && <MallLayer     onMallClick={handleMallClick} />}

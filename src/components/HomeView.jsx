@@ -77,42 +77,18 @@ function SunCloud() {
   );
 }
 
-/* ── Radar iframe (scale-to-fit, no distortion) ── */
-const RADAR_URL    = 'https://weather.tmd.go.th/kkn240_HQ_Loop_edit2.php';
-const RADAR_ORIG_W = 980;
-const RADAR_ORIG_H = 780;
+/* ── Radar image ── */
+const RADAR_GIF_URL = 'https://weather.tmd.go.th/kkn/kkn120loop.gif';
 
 function RadarFrame() {
-  const wrapRef = useRef(null);
-  const [scale, setScale] = useState(1);
-
-  useEffect(() => {
-    if (!wrapRef.current) return;
-    const ro = new ResizeObserver(([e]) => {
-      setScale(e.contentRect.width / RADAR_ORIG_W);
-    });
-    ro.observe(wrapRef.current);
-    return () => ro.disconnect();
-  }, []);
-
   return (
-    <div ref={wrapRef} className="w-full overflow-hidden rounded-2xl"
-      style={{ height: `${RADAR_ORIG_H * scale}px` }}>
-      <iframe
-        src={RADAR_URL}
-        title="เรดาร์ฝนขอนแก่น"
-        scrolling="no"
-        loading="lazy"
-        style={{
-          width:           `${RADAR_ORIG_W}px`,
-          height:          `${RADAR_ORIG_H}px`,
-          border:          'none',
-          transform:       `scale(${scale})`,
-          transformOrigin: 'top left',
-          display:         'block',
-        }}
-      />
-    </div>
+    <img
+      src={RADAR_GIF_URL}
+      alt="เรดาร์ฝนขอนแก่น"
+      loading="lazy"
+      className="w-full rounded-2xl"
+      style={{ display: 'block' }}
+    />
   );
 }
 
@@ -779,7 +755,7 @@ export default function HomeView({ tambons, forecast, weatherStatus, lastUpdated
                     <p className="text-[9px] text-white/60 mt-0.5 leading-none">Khon Kaen Doppler Radar · TMD</p>
                   </div>
                 </div>
-                <a href="https://weather.tmd.go.th/kkn240_HQ_Loop_edit2.php"
+                <a href={RADAR_GIF_URL}
                   target="_blank" rel="noopener noreferrer"
                   className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-semibold transition-all hover:scale-105"
                   style={{ background: 'rgba(255,255,255,0.3)', border: '1px solid rgba(255,255,255,0.5)', color: 'white' }}>
