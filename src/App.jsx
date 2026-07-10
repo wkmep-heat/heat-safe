@@ -43,18 +43,11 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [layerSettings, setLayerSettings] = useState({
     temperature:  { visible: true, opacity: 0.75 },
-    pm25:         { visible: true, opacity: 0.78 },
-    heat:         { visible: true, opacity: 0.78 },
     stream:       { visible: true, opacity: 0.85 },
     monthly_temp: { visible: true, opacity: 0.80 },
     hotspot:         { visible: true, opacity: 0.90 },
     himawari:        { visible: true, opacity: 0.85 },
-    kmz_road_detail:   { visible: true, opacity: 0.80 },
-    kmz_road_main:     { visible: true, opacity: 0.85 },
-    kmz_school:        { visible: true, opacity: 0.90 },
-    kmz_village:       { visible: true, opacity: 0.85 },
-    building_density:  { visible: true, opacity: 0.75 },
-    old_buildings:     { visible: true, opacity: 0.80 },
+    buildings:         { visible: true, opacity: 0.75 },
   });
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
@@ -100,7 +93,10 @@ export default function App() {
     }
   }, [activeLayers]);
   const handleFlyTo = useCallback(({ lat, lng }) => setFlyToTarget({ lat, lng, ts: Date.now() }), []);
-  const handleMapClick = useCallback(() => setSelectedDistrict(null), []);
+  const handleMapClick = useCallback(() => {
+    setSelectedDistrict(null);
+    setSidebarOpen(false);
+  }, []);
   const handleDistrictSelect = useCallback((district) => {
     setSelectedDistrict(district);
     if (district) { setSearchQuery(''); setFlyToTarget({ lat: district.lat, lng: district.lng, ts: Date.now() }); }

@@ -3,7 +3,7 @@ import {
   FaThermometerHalf, FaWind, FaFireAlt, FaSearch, FaBars,
   FaTimes, FaMapMarkerAlt, FaTint, FaLeaf,
   FaWater, FaSatelliteDish, FaSatellite, FaVideo, FaShieldAlt,
-  FaRoad, FaGraduationCap, FaHome, FaBuilding, FaBell,
+  FaBuilding, FaBell,
 } from 'react-icons/fa';
 import {
   layerInfo, getTemperatureColor, getPM25Color, getPM25Level,
@@ -11,22 +11,15 @@ import {
 } from '../data/mockData';
 
 const LAYER_BUTTONS = [
-  { id: 'temperature', label: 'อุณหภูมิ',               icon: FaThermometerHalf, activeBg: 'rgba(249,115,22,0.10)',  activeBorder: 'rgba(249,115,22,0.4)',  iconColor: '#FB923C' },
-  { id: 'pm25',        label: 'ฝุ่น PM2.5',              icon: FaWind,            activeBg: 'rgba(34,197,94,0.10)',   activeBorder: 'rgba(34,197,94,0.4)',   iconColor: '#22C55E' },
-  { id: 'heat',        label: 'การสะสมความร้อน',         icon: FaFireAlt,         activeBg: 'rgba(239,68,68,0.10)',   activeBorder: 'rgba(239,68,68,0.4)',   iconColor: '#EF4444' },
-  { id: 'stream',      label: 'ร่องน้ำ',                 icon: FaWater,           activeBg: 'rgba(14,165,233,0.10)',  activeBorder: 'rgba(14,165,233,0.4)',  iconColor: '#0EA5E9' },
-  { id: 'monthly_temp',label: 'อุณหภูมิ MODIS รายเดือน', icon: FaSatelliteDish,   activeBg: 'rgba(139,92,246,0.10)', activeBorder: 'rgba(139,92,246,0.4)', iconColor: '#8B5CF6' },
-  { id: 'himawari',   label: 'ติดตามสภาวะอากาศ',         icon: FaSatellite,       activeBg: 'rgba(8,145,178,0.10)',  activeBorder: 'rgba(8,145,178,0.4)', iconColor: '#0891b2' },
-  { id: 'cctv',       label: 'กล้อง CCTV จราจร',         icon: FaVideo,           activeBg: 'rgba(15,23,42,0.08)',   activeBorder: 'rgba(56,189,248,0.5)', iconColor: '#38bdf8' },
-  { id: 'suggested_parks',  label: 'พื้นที่แนะนำสวนสาธารณะ',    icon: FaLeaf,            activeBg: 'rgba(22,163,74,0.08)',   activeBorder: 'rgba(22,163,74,0.4)',   iconColor: '#16a34a' },
   { id: 'report_heat',      label: 'จุดแจ้งเหตุประชาชน',        icon: FaBell,            activeBg: 'rgba(239,68,68,0.08)',   activeBorder: 'rgba(239,68,68,0.4)',   iconColor: '#ef4444' },
   { id: 'heatrisk',        label: 'จุดเฝ้าระวังความร้อน',     icon: FaShieldAlt,       activeBg: 'rgba(215,25,28,0.08)',   activeBorder: 'rgba(215,25,28,0.4)',   iconColor: '#d7191c' },
-  { id: 'kmz_road_detail',label: 'ถนนรายละเอียด',             icon: FaRoad,            activeBg: 'rgba(34,197,94,0.10)',   activeBorder: 'rgba(34,197,94,0.4)',   iconColor: '#22C55E' },
-  { id: 'kmz_road_main',  label: 'ถนนหลัก',                  icon: FaRoad,            activeBg: 'rgba(220,38,38,0.10)',   activeBorder: 'rgba(220,38,38,0.4)',   iconColor: '#DC2626' },
-  { id: 'kmz_school',     label: 'โรงเรียน',                  icon: FaGraduationCap,   activeBg: 'rgba(37,99,235,0.10)',   activeBorder: 'rgba(37,99,235,0.4)',   iconColor: '#2563EB' },
-  { id: 'kmz_village',    label: 'หมู่บ้าน',                  icon: FaHome,            activeBg: 'rgba(219,39,119,0.10)', activeBorder: 'rgba(219,39,119,0.4)', iconColor: '#DB2777' },
-  { id: 'building_density', label: 'ความหนาแน่นอาคาร',        icon: FaBuilding,        activeBg: 'rgba(180,83,9,0.10)',   activeBorder: 'rgba(180,83,9,0.4)',   iconColor: '#B45309' },
-  { id: 'old_buildings',    label: 'อาคาร',                   icon: FaBuilding,        activeBg: 'rgba(245,158,11,0.10)',  activeBorder: 'rgba(245,158,11,0.4)',  iconColor: '#F59E0B' },
+  { id: 'himawari',   label: 'ติดตามสภาวะอากาศ',         icon: FaSatellite,       activeBg: 'rgba(8,145,178,0.10)',  activeBorder: 'rgba(8,145,178,0.4)', iconColor: '#0891b2' },
+  { id: 'temperature', label: 'อุณหภูมิ',               icon: FaThermometerHalf, activeBg: 'rgba(249,115,22,0.10)',  activeBorder: 'rgba(249,115,22,0.4)',  iconColor: '#FB923C' },
+  { id: 'buildings',        label: 'อาคาร',                   icon: FaBuilding,        activeBg: 'rgba(245,158,11,0.10)',  activeBorder: 'rgba(245,158,11,0.4)',  iconColor: '#F59E0B' },
+  { id: 'stream',      label: 'ร่องน้ำ',                 icon: FaWater,           activeBg: 'rgba(14,165,233,0.10)',  activeBorder: 'rgba(14,165,233,0.4)',  iconColor: '#0EA5E9' },
+  { id: 'cctv',       label: 'กล้อง CCTV จราจร',         icon: FaVideo,           activeBg: 'rgba(15,23,42,0.08)',   activeBorder: 'rgba(56,189,248,0.5)', iconColor: '#38bdf8' },
+  { id: 'suggested_parks',  label: 'พื้นที่แนะนำสวนสาธารณะ',    icon: FaLeaf,            activeBg: 'rgba(22,163,74,0.08)',   activeBorder: 'rgba(22,163,74,0.4)',   iconColor: '#16a34a' },
+  { id: 'monthly_temp',label: 'อุณหภูมิ MODIS รายเดือน', icon: FaSatelliteDish,   activeBg: 'rgba(139,92,246,0.10)', activeBorder: 'rgba(139,92,246,0.4)', iconColor: '#8B5CF6' },
 ];
 
 /* ── Live badge ── */
@@ -410,11 +403,6 @@ export default function Sidebar({
   if (isMobile) {
     return (
       <>
-        {/* Tap-outside-to-close backdrop */}
-        {isOpen && (
-          <div className="fixed inset-0 z-[1000]" onClick={onToggle} aria-hidden="true" />
-        )}
-
         {/* Bottom sheet panel */}
         <aside
           className="fixed left-0 right-0 z-[1002] flex flex-col sidebar-transition"
@@ -530,11 +518,6 @@ export default function Sidebar({
      ══════════════════════════════════════════════════════════════════════ */
   return (
     <>
-      {/* Tap-outside-to-close backdrop */}
-      {isOpen && (
-        <div className="fixed inset-0 z-[1000]" onClick={onToggle} aria-hidden="true" />
-      )}
-
       {/* Panel */}
       <aside
         className="fixed top-0 z-[1002] flex flex-col sidebar-transition"
