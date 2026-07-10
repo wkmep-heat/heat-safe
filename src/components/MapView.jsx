@@ -11,7 +11,6 @@ import HimawariLayer, { HIMAWARI_BANDS, generateFrames } from './layers/Himawari
 import CCTVLayer from './layers/CCTVLayer';
 import HeatRiskLayer from './layers/HeatRiskLayer';
 import HeatmapLayer from './layers/HeatmapLayer';
-import BuildingDensityLayer from './layers/BuildingDensityLayer';
 import OldBuildingLayer from './layers/OldBuildingLayer';
 import ReportPinsLayer from './layers/ReportPinsLayer';
 import SuggestedParkLayer from './layers/SuggestedParkLayer';
@@ -435,10 +434,7 @@ export default function MapView({ activeLayers, tambons, selectedDistrict, onDis
         {has('heatrisk') && <HeatRiskLayer filter={heatRiskFilter} showFlood />}
         {has('heatmap') && <HeatmapLayer opacity={s('heatmap').opacity} />}
         {has('buildings') && s('buildings').visible && (
-          <>
-            <BuildingDensityLayer opacity={s('buildings').opacity} />
-            <OldBuildingLayer opacity={s('buildings').opacity} />
-          </>
+          <OldBuildingLayer opacity={s('buildings').opacity} />
         )}
 
         {has('report_heat') && (
