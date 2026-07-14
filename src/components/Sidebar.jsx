@@ -3,7 +3,7 @@ import {
   FaThermometerHalf, FaWind, FaFireAlt, FaSearch, FaBars,
   FaTimes, FaMapMarkerAlt, FaTint, FaLeaf,
   FaWater, FaSatelliteDish, FaSatellite, FaVideo, FaShieldAlt,
-  FaBuilding, FaBell,
+  FaBuilding, FaBell, FaGlobeAsia, FaExternalLinkAlt,
 } from 'react-icons/fa';
 import {
   layerInfo, getTemperatureColor, getPM25Color, getPM25Level,
@@ -21,6 +21,8 @@ const LAYER_BUTTONS = [
   { id: 'suggested_parks',  label: 'พื้นที่แนะนำสวนสาธารณะ',    icon: FaLeaf,            activeBg: 'rgba(22,163,74,0.08)',   activeBorder: 'rgba(22,163,74,0.4)',   iconColor: '#16a34a' },
   { id: 'monthly_temp',label: 'อุณหภูมิ MODIS รายเดือน', icon: FaSatelliteDish,   activeBg: 'rgba(139,92,246,0.10)', activeBorder: 'rgba(139,92,246,0.4)', iconColor: '#8B5CF6' },
 ];
+
+const LANDCAST_BUTTON = { id: 'landcast', label: 'Heat Safe', icon: FaGlobeAsia, activeBg: 'rgba(56,189,248,0.10)', activeBorder: 'rgba(56,189,248,0.4)', iconColor: '#38bdf8' };
 
 /* ── Live badge ── */
 function LiveBadge({ status, lastUpdated, onRefresh }) {
@@ -321,6 +323,7 @@ export default function Sidebar({
   isOpen, onToggle,
   heatRiskFilter, onHeatRiskFilterChange,
   reportHeatView = { heatmap: true, pins: true }, onReportHeatViewChange,
+  onOpenLandcast,
 }) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [externalResults, setExternalResults] = useState([]);
@@ -446,13 +449,14 @@ export default function Sidebar({
             <div>
               <label className="block text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-2">เลเยอร์ข้อมูล</label>
               <div className="grid grid-cols-2 gap-2">
-                {LAYER_BUTTONS.map(btn => {
+                {[LANDCAST_BUTTON, ...LAYER_BUTTONS].map(btn => {
                   const Icon = btn.icon;
-                  const isActive = activeLayers?.has(btn.id) ?? false;
+                  const isLandcast = btn.id === 'landcast';
+                  const isActive = isLandcast ? true : (activeLayers?.has(btn.id) ?? false);
                   return (
                     <button
                       key={btn.id}
-                      onClick={() => onLayerToggle(btn.id)}
+                      onClick={() => isLandcast ? onOpenLandcast?.() : onLayerToggle(btn.id)}
                       className="flex items-center gap-2 px-3 py-2.5 rounded-xl transition-all text-left"
                       style={{
                         background: isActive ? btn.activeBg : 'white',
@@ -542,13 +546,14 @@ export default function Sidebar({
           <div>
             <label className="block text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-2">เลเยอร์ข้อมูล</label>
             <div className="space-y-2">
-              {LAYER_BUTTONS.map(btn => {
+              {[LANDCAST_BUTTON, ...LAYER_BUTTONS].map(btn => {
                 const Icon = btn.icon;
-                const isActive = activeLayers?.has(btn.id) ?? false;
+                const isLandcast = btn.id === 'landcast';
+                const isActive = isLandcast ? true : (activeLayers?.has(btn.id) ?? false);
                 return (
                   <div key={btn.id} className="rounded-2xl overflow-hidden bg-white transition-all duration-200"
                     style={{ border: `1.5px solid ${isActive ? btn.activeBorder : '#e0eaff'}`, boxShadow: isActive ? `0 0 12px ${btn.activeBorder}25` : 'none' }}>
-                    <button onClick={() => onLayerToggle(btn.id)}
+                    <button onClick={() => isLandcast ? onOpenLandcast?.() : onLayerToggle(btn.id)}
                       className="w-full flex items-center gap-2.5 px-3.5 py-3"
                       style={{ background: isActive ? btn.activeBg : 'transparent' }}>
                       <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -556,9 +561,13 @@ export default function Sidebar({
                         <Icon size={12} style={{ color: isActive ? btn.iconColor : '#93c5fd' }} />
                       </div>
                       <span className="text-sm font-medium flex-1 text-left" style={{ color: isActive ? '#1e293b' : '#94a3b8' }}>{btn.label}</span>
-                      <div className="w-8 h-4 rounded-full flex-shrink-0 relative transition-all" style={{ background: isActive ? btn.iconColor : '#e0eaff' }}>
-                        <div className="absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-all" style={{ left: isActive ? '17px' : '2px' }} />
-                      </div>
+                      {isLandcast ? (
+                        <FaExternalLinkAlt size={11} style={{ color: btn.iconColor }} />
+                      ) : (
+                        <div className="w-8 h-4 rounded-full flex-shrink-0 relative transition-all" style={{ background: isActive ? btn.iconColor : '#e0eaff' }}>
+                          <div className="absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-all" style={{ left: isActive ? '17px' : '2px' }} />
+                        </div>
+                      )}
                     </button>
 
                     {/* Mini stats */}

@@ -19,6 +19,7 @@ import TravelTimeView from './components/TravelTimeView';
 import WelcomePopup from './components/WelcomePopup';
 import GuideModal from './components/GuideModal';
 import MapGuideModal from './components/MapGuideModal';
+import LandcastOverlay from './components/LandcastOverlay';
 
 export default function App() {
   const { tambons, forecast, dailyMax: omDailyMax, dailyMin: omDailyMin, status: weatherStatus, lastUpdated, refresh: refreshWeather } = useRealtimeWeather();
@@ -75,6 +76,7 @@ export default function App() {
   const [mapPin, setMapPin] = useState(null);
   const [flyToTarget, setFlyToTarget] = useState(null);
   const [showGuide, setShowGuide] = useState(false);
+  const [showLandcast, setShowLandcast] = useState(false);
 
   const handleLayerToggle = useCallback((id) => {
     const beingAdded = !activeLayers.has(id);
@@ -166,6 +168,7 @@ export default function App() {
         onHeatRiskFilterChange={setHeatRiskFilter}
         reportHeatView={reportHeatView}
         onReportHeatViewChange={toggleReportHeatView}
+        onOpenLandcast={() => setShowLandcast(true)}
       />
       {activeLayers.has('temperature') && (
         <ForecastTimePicker datetime={forecastDatetime} onChange={setForecastDatetime} sidebarOpen={sidebarOpen} />
@@ -174,6 +177,7 @@ export default function App() {
         <MonthPicker selectedMonth={selectedMonth} onChange={setSelectedMonth} sidebarOpen={sidebarOpen} />
       )}
       {showMapGuide && <MapGuideModal onClose={() => setShowMapGuide(false)} />}
+      {showLandcast && <LandcastOverlay onClose={() => setShowLandcast(false)} />}
       <button
         onClick={() => setShowMapGuide(true)}
         className="fixed z-[1000] flex items-center justify-center rounded-full shadow-lg transition-all hover:scale-110 active:scale-95"
@@ -243,6 +247,7 @@ export default function App() {
             onHeatRiskFilterChange={setHeatRiskFilter}
             reportHeatView={reportHeatView}
             onReportHeatViewChange={toggleReportHeatView}
+            onOpenLandcast={() => setShowLandcast(true)}
           />
           {activeLayers.has('temperature') && (
             <ForecastTimePicker datetime={forecastDatetime} onChange={setForecastDatetime} sidebarOpen={sidebarOpen} />
@@ -253,6 +258,7 @@ export default function App() {
           {showMapGuide && <MapGuideModal onClose={() => setShowMapGuide(false)} />}
         </>
       )}
+      {showLandcast && <LandcastOverlay onClose={() => setShowLandcast(false)} />}
 
       {/* ── Home tab ── */}
       {!isAdmin && activeTab === 'home' && (
