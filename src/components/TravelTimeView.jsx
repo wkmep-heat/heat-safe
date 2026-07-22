@@ -138,6 +138,13 @@ function HospitalLayer({ onHospitalClick }) {
     HOSPITALS.forEach(h => {
       const marker = L.marker([h.lat, h.lng], { icon: hospitalIconMarker });
       marker.bindTooltip(h.name, { direction: 'top', offset: [0, -14] });
+      if (h.link || h.phone) {
+        const btnStyle = 'display:inline-block;padding:5px 10px;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;';
+        const parts = [];
+        if (h.link) parts.push(`<a href="${h.link}" target="_blank" rel="noopener noreferrer" style="${btnStyle}background:#eff6ff;color:#2563eb;">🧭 เส้นทาง</a>`);
+        if (h.phone) parts.push(`<a href="tel:${h.phone}" style="${btnStyle}background:#f0fdf4;color:#16a34a;">📞 โทร</a>`);
+        marker.bindPopup(`<div style="display:flex;gap:6px;">${parts.join('')}</div>`);
+      }
       marker.on('click', (e) => {
         L.DomEvent.stopPropagation(e);
         onHospitalClick({ lat: h.lat, lng: h.lng }, h.name);
@@ -306,6 +313,11 @@ export default function TravelTimeView() {
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
+  }, []);
+
+  useEffect(() => {
+    handleLocateMe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleMapClick    = useCallback((latlng) => runIsochrone(latlng, null), [runIsochrone]);
