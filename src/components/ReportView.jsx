@@ -232,7 +232,7 @@ export default function ReportView() {
           </a>
           <div>
             <p className="font-black text-white text-lg leading-tight">แจ้งเหตุ</p>
-            <p className="text-xs text-white/70">ระบบติดตามสภาพแวดล้อม จ.ขอนแก่น</p>
+            <p className="text-xs text-white/70">Heat Safe Khonkaen</p>
           </div>
         </div>
 

@@ -928,7 +928,7 @@ function Dashboard({ onLogout }) {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-base font-black text-slate-800">แผงควบคุม Admin</p>
-          <p className="text-[11px] text-slate-400">ระบบติดตามสภาพแวดล้อม จ.ขอนแก่น</p>
+          <p className="text-[11px] text-slate-400">Heat Safe Khonkaen</p>
         </div>
         <button onClick={onLogout}
           className="text-[11px] text-slate-400 hover:text-red-400 transition-colors px-2 py-1 rounded-lg hover:bg-red-50">

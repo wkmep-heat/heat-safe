@@ -76,7 +76,7 @@ export default function TrackView() {
           </a>
           <div>
             <p className="font-black text-slate-800 text-lg leading-tight">ติดตามสถานะ</p>
-            <p className="text-xs text-slate-400">ระบบติดตามสภาพแวดล้อม จ.ขอนแก่น</p>
+            <p className="text-xs text-slate-400">Heat Safe Khonkaen</p>
           </div>
         </div>
 

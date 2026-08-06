@@ -23,7 +23,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  const text = `🚨 ${title.trim()}\n\n${body.trim()}\n\n— ระบบติดตามสภาพแวดล้อม จ.ขอนแก่น`;
+  const text = `🚨 ${title.trim()}\n\n${body.trim()}\n\n— Heat Safe Khonkaen`;
 
   const messages = [{ type: 'text', text }];
   if (imageUrl) {

@@ -12,8 +12,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['222.png'],
       manifest: {
-        name: 'ระบบติดตามสภาพแวดล้อม จังหวัดขอนแก่น',
-        short_name: 'Heat Safe KhonKaen',
+        name: 'Heat Safe Khonkaen',
+        short_name: 'Heat Safe Khonkaen',
         description: 'ติดตามสภาพอากาศ ฝุ่น PM2.5 และแผนที่ความร้อน อำเภอเมืองขอนแก่น แบบ Real-time',
         lang: 'th',
         theme_color: '#f8faff',
