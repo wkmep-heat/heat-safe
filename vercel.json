@@ -9,6 +9,7 @@
   "crons": [
     { "path": "/api/notify", "schedule": "0 0 * * *" },
     { "path": "/api/notify", "schedule": "30 4 * * *" },
-    { "path": "/api/notify", "schedule": "0 8 * * *" }
+    { "path": "/api/notify", "schedule": "0 8 * * *" },
+    { "path": "/api/notify-water", "schedule": "*/30 * * * *" }
   ]
 }

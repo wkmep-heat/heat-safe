@@ -12,6 +12,7 @@ import MonthPicker from './components/MonthPicker';
 import { useRealtimeWeather } from './hooks/useRealtimeWeather';
 import { useTMDWeather } from './hooks/useTMDWeather';
 import { useAutoNotify } from './hooks/useAutoNotify';
+import { useWaterLevel } from './hooks/useWaterLevel';
 import AdminView from './components/AdminView';
 import ReportView from './components/ReportView';
 import TrackView from './components/TrackView';
@@ -25,6 +26,7 @@ export default function App() {
   const { tambons, forecast, dailyMax: omDailyMax, dailyMin: omDailyMin, status: weatherStatus, lastUpdated, refresh: refreshWeather } = useRealtimeWeather();
   const { data: tmdData } = useTMDWeather();
   const { needsBanner, requestNow } = useAutoNotify();
+  const { stations: waterStations, summary: waterSummary, status: waterStatus, lastUpdated: waterUpdated } = useWaterLevel();
 
   // Special routes via URL query params
   const [isAdmin]       = useState(() => new URLSearchParams(window.location.search).has('admin'));
@@ -45,6 +47,7 @@ export default function App() {
   const [layerSettings, setLayerSettings] = useState({
     temperature:  { visible: true, opacity: 0.75 },
     stream:       { visible: true, opacity: 0.85 },
+    waterlevel:   { visible: true, opacity: 1 },
     monthly_temp: { visible: true, opacity: 0.80 },
     hotspot:         { visible: true, opacity: 0.90 },
     himawari:        { visible: true, opacity: 0.85 },
@@ -141,6 +144,7 @@ export default function App() {
           initialZoom={mapPosition.zoom}
           onMapMove={handleMapMove}
           mapPin={mapPin}
+          waterStations={waterStations}
           basemap={basemap}
           onBasemapChange={setBasemap}
           heatRiskFilter={heatRiskFilter}
@@ -220,6 +224,7 @@ export default function App() {
               initialZoom={mapPosition.zoom}
               onMapMove={handleMapMove}
               mapPin={mapPin}
+              waterStations={waterStations}
               basemap={basemap}
               onBasemapChange={setBasemap}
               heatRiskFilter={heatRiskFilter}
@@ -273,6 +278,10 @@ export default function App() {
           tmdData={tmdData}
           needsNotifyBanner={needsBanner}
           onEnableNotify={requestNow}
+          waterStations={waterStations}
+          waterSummary={waterSummary}
+          waterStatus={waterStatus}
+          waterUpdated={waterUpdated}
           onTambonClick={(tambon) => {
             setFlyToTarget({ lat: tambon.lat, lng: tambon.lng, ts: Date.now() });
             setSelectedDistrict(tambon);

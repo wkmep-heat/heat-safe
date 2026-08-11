@@ -251,6 +251,9 @@ export default async function handler(req, res) {
   const isScheduled = SCHEDULED_TIMES.some(t => t.h === ictHour && t.m === ictMinute);
   if (isScheduled) reasons.push('scheduled');
 
+  // หมายเหตุ: การเช็กระดับน้ำแยกไปเป็น cron อิสระที่ /api/notify-water แล้ว
+  // (ทุก 30 นาที) ไม่ได้แนบมากับ cron นี้อีกต่อไป
+
   if (!reasons.length) {
     res.status(200).json({ skipped: true, ictHour, ictMinute });
     return;

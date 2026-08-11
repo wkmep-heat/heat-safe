@@ -5,6 +5,7 @@ import { KK_CENTER, KK_DEFAULT_ZOOM, THAILAND_BOUNDS, hotspots, getTemperatureCo
 import TemperatureLayer from './layers/TemperatureLayer';
 import TMDTempTileLayer from './layers/TMDTempTileLayer';
 import StreamLayer from './layers/StreamLayer';
+import WaterLevelLayer from './layers/WaterLevelLayer';
 import NASATempMonthlyLayer from './layers/NASATempMonthlyLayer';
 
 import HimawariLayer, { HIMAWARI_BANDS, generateFrames } from './layers/HimawariLayer';
@@ -235,7 +236,7 @@ function TambonPinMarker({ pin }) {
   );
 }
 
-export default function MapView({ activeLayers, tambons, selectedDistrict, onDistrictClick, onMapClick, forecastDatetime, layerSettings, selectedMonth, flyToTarget, initialCenter, initialZoom, onMapMove, mapPin, basemap = 'satellite', onBasemapChange, heatRiskFilter = 'all', reportHeatView = { heatmap: true, pins: true } }) {
+export default function MapView({ activeLayers, tambons, selectedDistrict, onDistrictClick, onMapClick, forecastDatetime, layerSettings, selectedMonth, flyToTarget, initialCenter, initialZoom, onMapMove, mapPin, basemap = 'satellite', onBasemapChange, heatRiskFilter = 'all', reportHeatView = { heatmap: true, pins: true }, waterStations = [] }) {
   const [himawariband, setHimawariband] = useState('ir');
   /* basemap + showMapBox are now controlled by parent */
   const [himawariFrames] = useState(() => generateFrames(12));
@@ -313,6 +314,7 @@ export default function MapView({ activeLayers, tambons, selectedDistrict, onDis
         {has('stream') && s('stream').visible && (
           <StreamLayer opacity={s('stream').opacity} basemap={basemap} />
         )}
+        {has('waterlevel') && <WaterLevelLayer stations={waterStations} />}
         {has('monthly_temp') && s('monthly_temp').visible && selectedMonth && (
           <NASATempMonthlyLayer month={selectedMonth} opacity={s('monthly_temp').opacity} />
         )}

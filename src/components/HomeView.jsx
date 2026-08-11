@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+ import { useState, useEffect, useRef } from 'react';
 import { FaWind, FaTint, FaMapMarkerAlt, FaThermometerHalf, FaSun, FaCrosshairs, FaCloudRain } from 'react-icons/fa';
 import { getTemperatureColor, getPM25Color, getPM25Level } from '../data/mockData';
 
@@ -454,10 +454,91 @@ function SkyDecorations({ type }) {
   );
 }
 
+/* ── Water level card ── */
+const SITUATION_LABEL = {
+  1: 'น้ำน้อยวิกฤต', 2: 'น้ำน้อย', 3: 'ปกติ', 4: 'น้ำมาก', 5: 'น้ำมากวิกฤต',
+};
+const RISK_COLOR = ['#16a34a', '#ca8a04', '#ea580c', '#dc2626'];
+
+function WaterLevelCard({ stations, summary, status, lastUpdated }) {
+  const cardStyle = {
+    background: 'linear-gradient(135deg,rgba(219,234,254,0.65) 0%,rgba(191,219,254,0.65) 55%,rgba(186,230,253,0.65) 100%)',
+    backdropFilter: 'blur(16px)',
+    WebkitBackdropFilter: 'blur(16px)',
+    border: '1px solid rgba(147,197,253,0.5)',
+    boxShadow: '0 8px 32px rgba(59,130,246,0.12), 0 2px 8px rgba(0,0,0,0.05)',
+  };
+
+  const overBank  = summary?.overBankCount ?? 0;
+  const worst     = summary?.worstStation ?? null;
+  const worstRisk = summary?.worstRisk ?? 0;
+  const banner = overBank > 0
+    ? { title: `🔴 น้ำล้นตลิ่ง ${overBank} จุด`, desc: worst ? `${worst.name} · ${worst.river ?? worst.amphoe ?? ''}` : 'โปรดระวังพื้นที่ริมน้ำ', color: '#dc2626' }
+    : worstRisk >= 2
+    ? { title: `⚠️ ${SITUATION_LABEL[worst?.situationLevel] ?? 'น้ำมาก'}`, desc: worst ? `${worst.name} · ${worst.river ?? worst.amphoe ?? ''}` : 'ระดับน้ำสูงกว่าปกติ', color: RISK_COLOR[worstRisk] }
+    : worstRisk === 1
+    ? { title: `ℹ️ ${SITUATION_LABEL[worst?.situationLevel] ?? 'น้ำน้อย'}`, desc: worst ? `${worst.name} · ${worst.river ?? worst.amphoe ?? ''}` : 'ระดับน้ำต่ำกว่าปกติบางจุด', color: RISK_COLOR[1] }
+    : { title: '✅ ระดับน้ำปกติ', desc: `${stations?.length ?? 0} สถานีในจังหวัดขอนแก่น`, color: RISK_COLOR[0] };
+
+  return (
+    <div className="rounded-3xl overflow-hidden" style={cardStyle}>
+      <div className="px-5 pt-5 pb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <FaTint size={13} color="white" />
+          <p className="text-[13px] font-extrabold tracking-wide text-white leading-none">ระดับน้ำขอนแก่น</p>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className={`w-1.5 h-1.5 rounded-full ${status === 'ok' ? 'bg-emerald-400 live-dot' : status === 'error' ? 'bg-rose-400' : 'bg-violet-400 animate-pulse'}`} />
+          <span className="text-[10px] text-white/60">
+            {status === 'ok' && lastUpdated ? lastUpdated.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : status === 'error' ? 'ออฟไลน์' : 'กำลังโหลด...'}
+          </span>
+        </div>
+      </div>
+
+      <div className="px-5 pb-3">
+        <div className="rounded-2xl px-4 py-3 flex items-center gap-3" style={{ background: `${banner.color}20`, border: `1px solid ${banner.color}50` }}>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-black leading-tight" style={{ color: 'white' }}>{banner.title}</p>
+            <p className="text-[11px] text-white/70 mt-0.5 truncate">{banner.desc}</p>
+          </div>
+        </div>
+      </div>
+
+      {stations?.length > 0 && (
+        <div className="px-4 pb-4 space-y-1.5 max-h-52 overflow-y-auto">
+          {stations.slice(0, 6).map(s => {
+            const color = RISK_COLOR[s.riskLevel] ?? RISK_COLOR[0];
+            return (
+              <div key={s.id} className="rounded-xl px-3 py-2 flex items-center gap-2.5"
+                style={{ background: 'rgba(255,255,255,0.15)' }}>
+                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color, boxShadow: `0 0 6px ${color}` }} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] font-bold text-white truncate">{s.name}</p>
+                  <p className="text-[9px] text-white/60 truncate">{s.river ?? s.amphoe ?? ''}{s.diffBankText ? ` · ${s.diffBankText} ${s.diffBank ?? ''}ม.` : ''}</p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-xs font-black text-white leading-none">{s.waterLevelMsl != null ? s.waterLevelMsl.toFixed(2) : '--'}</p>
+                  <span className="text-[9px] font-bold" style={{ color }}>{SITUATION_LABEL[s.situationLevel] ?? '—'}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {status === 'error' && (!stations || stations.length === 0) && (
+        <div className="px-5 pb-4"><p className="text-xs text-white/60">โหลดข้อมูลระดับน้ำไม่สำเร็จ</p></div>
+      )}
+
+      <div className="px-5 pb-3 text-[9px] text-white/40">ที่มา: สถาบันสารสนเทศทรัพยากรน้ำ (สสน.) · Thai Water</div>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════
    Main component
    ═══════════════════════════════════════════════ */
-export default function HomeView({ tambons, forecast, weatherStatus, lastUpdated, tmdTempMax, tmdTempMin, tmdData, onTambonClick, needsNotifyBanner = false, onEnableNotify }) {
+export default function HomeView({ tambons, forecast, weatherStatus, lastUpdated, tmdTempMax, tmdTempMin, tmdData, onTambonClick, needsNotifyBanner = false, onEnableNotify, waterStations = [], waterSummary = null, waterStatus = 'loading', waterUpdated = null }) {
   const [now, setNow] = useState(new Date());
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 60_000);
@@ -656,6 +737,9 @@ export default function HomeView({ tambons, forecast, weatherStatus, lastUpdated
               </div>
 
             </div>
+
+            {/* ── Water level (flood watch) ── */}
+            <WaterLevelCard stations={waterStations} summary={waterSummary} status={waterStatus} lastUpdated={waterUpdated} />
 
             {/* ── Hourly forecast ── */}
             <ForecastStrip forecast={forecast} tmdData={tmdData} />

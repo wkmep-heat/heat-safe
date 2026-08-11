@@ -98,6 +98,10 @@ async function uploadImageToImgBB(file) {
   return json.data.url;
 }
 
+const WATER_SITUATION_LABEL = {
+  1: 'น้ำน้อยวิกฤต', 2: 'น้ำน้อย', 3: 'ปกติ', 4: 'น้ำมาก', 5: 'น้ำมากวิกฤต',
+};
+
 function AlertComposer() {
   const [title,      setTitle]     = useState('');
   const [body,       setBody]      = useState('');
@@ -105,7 +109,34 @@ function AlertComposer() {
   const [imgLoading, setImgLoading] = useState(false);
   const [loading,    setLoading]   = useState(false);
   const [result,     setResult]    = useState(null);
+  const [waterLoading, setWaterLoading] = useState(false);
   const fileRef = useRef(null);
+
+  // ── ดึงสถานการณ์น้ำล่าสุด แล้วเติมหัวข้อ/รายละเอียดให้อัตโนมัติ (แก้ไขก่อนส่งได้) ──
+  const fetchWaterLevel = async () => {
+    setWaterLoading(true);
+    setResult(null);
+    try {
+      const json = await fetch('/api/waterlevel').then(r => r.json());
+      if (!json.ok || !json.stations?.length) throw new Error();
+      const { stations, summary } = json;
+      const worst = summary?.worstStation;
+      const overBank = summary?.overBankCount ?? 0;
+
+      setTitle(overBank > 0 ? `น้ำล้นตลิ่ง ${overBank} จุด · ขอนแก่น` : `สถานการณ์น้ำขอนแก่น · ${WATER_SITUATION_LABEL[worst?.situationLevel] ?? 'อัปเดต'}`);
+      setBody(
+        stations.slice(0, 5).map(s => {
+          const sit = WATER_SITUATION_LABEL[s.situationLevel] ?? '—';
+          const bank = s.diffBankText ? ` (${s.diffBankText} ${s.diffBank ?? ''} ม.)` : '';
+          return `${s.isOverBank ? '🔴 ' : ''}${s.name} (${s.river ?? s.amphoe ?? ''}) — ${sit}${bank}`;
+        }).join('\n')
+      );
+    } catch {
+      setResult({ ok: false, msg: 'ดึงข้อมูลระดับน้ำไม่สำเร็จ กรุณาลองใหม่' });
+    } finally {
+      setWaterLoading(false);
+    }
+  };
 
   const handleImageChange = async (e) => {
     const file = e.target.files?.[0];
@@ -170,6 +201,14 @@ function AlertComposer() {
 
   return (
     <div className="flex flex-col gap-4">
+      <button onClick={fetchWaterLevel} disabled={waterLoading}
+        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95"
+        style={{ background: 'rgba(2,132,199,0.08)', color: '#0284c7', border: '1.5px solid rgba(2,132,199,0.3)' }}>
+        {waterLoading
+          ? <><div className="w-3.5 h-3.5 border-2 border-sky-200 border-t-sky-500 rounded-full animate-spin" />กำลังตรวจสอบ...</>
+          : <>🌊 ตรวจสอบระดับน้ำล่าสุด (เติมหัวข้อ/รายละเอียดให้)</>}
+      </button>
+
       <div>
         <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">หัวข้อการแจ้งเตือน</p>
         <div className="relative">
