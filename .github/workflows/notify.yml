@@ -1,0 +1,23 @@
+name: Weather Notify Cron
+
+# แทนที่ Vercel Cron ซึ่งจำกัดเหลือวันละครั้งบน Hobby plan — ยิง /api/notify ทุก
+# 30 นาทีแทน ฟรีสำหรับ public repo (ไม่ต้องใช้ Vercel Pro)
+#
+# ตั้งค่าที่ต้องทำก่อนใช้งาน (Settings → Secrets and variables → Actions):
+#   - Secret  CRON_SECRET : ต้องตรงกับ CRON_SECRET ที่ตั้งไว้บน Vercel
+#   - Variable APP_URL    : โดเมนที่ deploy จริง เช่น https://your-app.vercel.app
+#                           (ถ้าไม่ตั้ง จะ fallback ไปที่โดเมนเริ่มต้นของโปรเจกต์)
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call /api/notify
+        run: |
+          curl -sf -X GET "${{ vars.APP_URL || 'https://khonkaenheat-map.vercel.app' }}/api/notify" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

@@ -1,5 +1,5 @@
 // ── Shared helper: ระดับน้ำจังหวัดขอนแก่น จาก Thai Water API (สสน. / HII) ──────
-// ใช้ร่วมกันระหว่าง api/waterlevel.js (public endpoint) และ api/notify-water.js (cron)
+// ใช้โดย api/waterlevel.js (public endpoint สำหรับแผนที่)
 
 const THAIWATER_URL = 'https://api-v3.thaiwater.net/api/v1/thaiwater30/public/waterlevel_load';
 const PROVINCE_TH   = 'ขอนแก่น';
