@@ -8,12 +8,69 @@ const KK_LAT  = 16.4322;
 const KK_LNG  = 102.8359;
 const KK_WMO  = '48381';
 
-// Scheduled notification times (ICT)
+// Scheduled notification times (ICT) — เช้า / เที่ยง / เย็น
 const SCHEDULED_TIMES = [
   { h:  7, m:  0 },
-  { h: 11, m: 30 },
-  { h: 15, m:  0 },
+  { h: 12, m:  0 },
+  { h: 17, m:  0 },
 ];
+
+// ── ช่วงเวลาของวัน สำหรับใช้ในข้อความแจ้งเตือน (เช้านี้ / เที่ยงนี้ / เย็นนี้ ...) ──
+function resolvePeriod(hour) {
+  if (hour >= 19 || hour < 5) return 'คืนนี้';
+  if (hour < 11) return 'เช้า';
+  if (hour < 14) return 'เที่ยง';
+  return 'เย็น';
+}
+
+// ── เกณฑ์ "สภาพอากาศวิกฤต" — แจ้งเตือนทันทีไม่ว่าจะถึงรอบเช้า/เที่ยง/เย็นหรือไม่ ──
+const HEAT_CRITICAL = 42; // °C ดัชนีความร้อน/รู้สึกเหมือน ระดับ "อันตราย"
+const RAIN_CRITICAL = 35; // มม. ฝนตกหนัก (เกณฑ์ TMD)
+const PM25_CRITICAL = 91; // มคก./ลบ.ม. ฝุ่นระดับสีแดง
+const UV_CRITICAL   = 11; // ดัชนี UV ระดับ "อันตราย"
+
+// true เมื่อค่าปัจจุบันข้าม threshold ขึ้นไป และรอบก่อนหน้ายังไม่ถึง (กันแจ้งซ้ำทุกรอบ)
+function crossedUp(current, previous, threshold) {
+  if (current == null || current < threshold) return false;
+  return previous == null || previous < threshold;
+}
+
+// ── สรุปสภาพอากาศปัจจุบันเป็นประโยคสั้นๆ พร้อมอิโมจิ ────────────────────────
+function weatherPhrase(data) {
+  const { temp, feelsLike, uvIndex, rainfall, precipProb, pm25 } = data;
+
+  const heavyRain = (rainfall != null && rainfall > 5) || (precipProb != null && precipProb >= 70);
+  const lightRain = !heavyRain && ((rainfall != null && rainfall > 0) || (precipProb != null && precipProb >= 40));
+  const veryHot   = (feelsLike ?? temp ?? 0) >= 40;
+  const hot       = !veryHot && temp != null && temp >= 35;
+  const highUV    = uvIndex != null && uvIndex >= 8;
+  const dusty     = pm25 != null && pm25 >= 50;
+  const cool      = temp != null && temp <= 22;
+
+  if (heavyRain) {
+    const amt = rainfall != null && rainfall > 0 ? `${rainfall} มม. ` : '';
+    return { emoji: '🌧️', text: `มีฝนตก${amt}อย่าลืมพกร่มนะ` };
+  }
+  if (lightRain) {
+    return { emoji: '🌦️', text: 'อาจมีฝนตกเล็กน้อย อย่าลืมพกร่มไว้ก่อนนะ' };
+  }
+  if (veryHot) {
+    return { emoji: '🥵', text: 'อากาศร้อนจัด ดื่มน้ำเยอะๆ และเลี่ยงแดดจ้านะ' };
+  }
+  if (hot) {
+    return { emoji: '🌡️', text: 'อากาศร้อน ดื่มน้ำเยอะๆ นะ' };
+  }
+  if (highUV) {
+    return { emoji: '☀️', text: 'แดดแรง ทาครีมกันแดดก่อนออกจากบ้านนะ' };
+  }
+  if (dusty) {
+    return { emoji: '😷', text: `ฝุ่น PM2.5 ขึ้นสูง (${Math.round(pm25)} มคก./ลบ.ม.) ใส่หน้ากากป้องกันด้วยนะ` };
+  }
+  if (cool) {
+    return { emoji: '🌥️', text: 'อากาศเย็นสบาย' };
+  }
+  return { emoji: '🌤️', text: 'อากาศดี' };
+}
 
 // UV levels: 3=ปานกลาง, 6=สูง, 8=สูงมาก, 11=อันตราย
 const UV_LEVELS = [
@@ -109,56 +166,60 @@ async function fetchTMDWarnings() {
 }
 
 // ── Build notification payload from current conditions ──────────────────────
-function buildNotification(data, reasons) {
-  const { temp, uvIndex, rainfall, precipProb } = data;
+// ลำดับความสำคัญ: ประกาศเตือนภัย TMD > สภาพอากาศวิกฤต (ร้อน/ฝนหนัก/ฝุ่น/UV) >
+// UV ขึ้นระดับปานกลาง > ข้อความตามรอบเช้า/เที่ยง/เย็นปกติ — ส่งได้ทีละ 1 เรื่องต่อรอบ
+function buildNotification(data, reasons, period) {
+  const { temp, feelsLike, uvIndex, rainfall, pm25 } = data;
+  const tempStr   = temp != null ? `${Math.round(temp)}°C` : '--';
+  const feelsStr  = feelsLike != null ? `${Math.round(feelsLike)}°C` : tempStr;
 
-  // ICT time string e.g. "06.30"
-  const ictNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
-  const hh = String(ictNow.getHours()).padStart(2, '0');
-  const mm = String(ictNow.getMinutes()).padStart(2, '0');
-  const timeStr = `${hh}.${mm}`;
-
-  // Severe weather warning — keep original warning text
-  if (reasons.includes('warning')) {
-    return {
+  const builders = {
+    warning: () => ({
       title: '🌪️ เตือนภัยอากาศ TMD · ขอนแก่น',
       body:  data.warnings?.[0] ?? 'มีประกาศเตือนภัยสภาพอากาศในพื้นที่ขอนแก่น',
-    };
-  }
+    }),
 
-  const tempStr = temp != null ? `${Math.round(temp)}°C` : '--';
-  const uvStr   = uvIndex != null ? Math.round(uvIndex) : '--';
-  const uvLevel = uvIndex != null ? (UV_LEVELS.find(l => uvIndex >= l.min)?.label ?? 'ต่ำ') : 'ต่ำ';
+    heat_critical: () => ({
+      title: '🚨 อากาศร้อนอันตราย · ขอนแก่น',
+      body:  `${period}นี้อุณหภูมิ ${tempStr} รู้สึกเหมือน ${feelsStr} ร้อนถึงระดับอันตราย งดกิจกรรมกลางแจ้งและดื่มน้ำบ่อยๆ นะ`,
+    }),
 
-  // Rain suffix
-  let rainSuffix = '';
-  if (rainfall != null && rainfall > 5) {
-    rainSuffix = ` และมีฝนตก ${rainfall} มม. โปรดระวัง`;
-  } else if (precipProb != null && precipProb >= 70) {
-    rainSuffix = ` และมีโอกาสฝนตก ${precipProb}% โปรดระวัง`;
-  } else if (precipProb != null && precipProb >= 40) {
-    rainSuffix = ' และอาจมีฝนตกเล็กน้อย โปรดระวัง';
-  }
+    rain_critical: () => ({
+      title: '🚨 ฝนตกหนัก · ขอนแก่น',
+      body:  `${period}นี้มีฝนตกหนัก ${rainfall} มม. ระวังน้ำท่วมขังและน้ำป่าไหลหลาก งดเดินทางหากไม่จำเป็นนะ`,
+    }),
 
-  const body = `เวลา ${timeStr} น. อุณหภูมิ ${tempStr} UV ${uvStr} (${uvLevel})${rainSuffix}`;
+    pm25_critical: () => ({
+      title: '🚨 ฝุ่น PM2.5 วิกฤต · ขอนแก่น',
+      body:  `${period}นี้ฝุ่น PM2.5 สูงถึง ${Math.round(pm25)} มคก./ลบ.ม. (ระดับสีแดง) หลีกเลี่ยงกิจกรรมกลางแจ้งและใส่หน้ากาก N95 นะ`,
+    }),
 
-  // UV alert — different title
-  if (reasons.includes('uv_alert')) {
-    return {
-      title: `☀️ UV สูงขึ้นระดับปานกลาง · ขอนแก่น`,
-      body,
-    };
-  }
+    uv_extreme: () => ({
+      title: '🚨 UV อันตราย · ขอนแก่น',
+      body:  `${period}นี้ดัชนี UV สูงถึงระดับอันตราย (${Math.round(uvIndex)}) หลีกเลี่ยงแดดจัดช่วง 10.00-16.00 น. นะ`,
+    }),
 
-  // Emoji for scheduled
-  const hasRain = (rainfall ?? 0) > 0 || (precipProb ?? 0) >= 40;
-  const emoji = hasRain ? ((precipProb ?? 0) >= 70 || (rainfall ?? 0) > 5 ? '🌧️' : '🌦️')
-              : (uvIndex ?? 0) >= 8 ? '☀️' : (temp ?? 0) >= 35 ? '🌡️' : '🌤️';
+    uv_alert: () => {
+      const uvLevel = uvIndex != null ? (UV_LEVELS.find(l => uvIndex >= l.min)?.label ?? 'ต่ำ') : 'ต่ำ';
+      const { text } = weatherPhrase(data);
+      return {
+        title: `☀️ UV ขึ้นระดับ${uvLevel} · ขอนแก่น`,
+        body:  `${period}นี้อุณหภูมิ ${tempStr} UV ${Math.round(uvIndex)} (${uvLevel}) ${text}`,
+      };
+    },
 
-  return {
-    title: `${emoji} สภาพอากาศขอนแก่น`,
-    body,
+    scheduled: () => {
+      const { emoji, text } = weatherPhrase(data);
+      return {
+        title: `${emoji} อากาศ${period}นี้ · ขอนแก่น`,
+        body:  `${period}นี้อุณหภูมิ ${tempStr} ${text}`,
+      };
+    },
   };
+
+  const priority = ['warning', 'heat_critical', 'rain_critical', 'pm25_critical', 'uv_extreme', 'uv_alert', 'scheduled'];
+  const matched  = priority.find(r => reasons.includes(r));
+  return builders[matched]();
 }
 
 // ── Send push to all subscribers ────────────────────────────────────────────
@@ -247,7 +308,17 @@ export default async function handler(req, res) {
     reasons.push('uv_alert');
   }
 
-  // 3. Scheduled time
+  // 3. สภาพอากาศวิกฤต — แจ้งทันทีที่ค่าข้ามเกณฑ์อันตราย ไม่ต้องรอรอบเช้า/เที่ยง/เย็น
+  // หมายเหตุ: ตาราง notification_state ไม่มีคอลัมน์ feels_like จึงเทียบค่าก่อนหน้า
+  // ด้วย temp ที่บันทึกไว้เดิม (ไม่ต้องแก้ schema)
+  const currentHeat = data.feelsLike ?? data.temp;
+  const prevHeat     = prevState?.temp ?? null;
+  if (crossedUp(currentHeat, prevHeat, HEAT_CRITICAL))               reasons.push('heat_critical');
+  if (crossedUp(data.rainfall, prevState?.rainfall ?? null, RAIN_CRITICAL)) reasons.push('rain_critical');
+  if (crossedUp(data.pm25, prevState?.pm25 ?? null, PM25_CRITICAL))  reasons.push('pm25_critical');
+  if (crossedUp(uvIndex, prevUV, UV_CRITICAL))                       reasons.push('uv_extreme');
+
+  // 4. Scheduled time
   const isScheduled = SCHEDULED_TIMES.some(t => t.h === ictHour && t.m === ictMinute);
   if (isScheduled) reasons.push('scheduled');
 
@@ -260,7 +331,8 @@ export default async function handler(req, res) {
   }
 
   // ── Build and send notification ──────────────────────────────────────────
-  const notification = buildNotification(data, reasons);
+  const period = resolvePeriod(ictHour);
+  const notification = buildNotification(data, reasons, period);
   const { sent, failed } = await sendToAll(notification);
 
   // ── Save current state to Supabase ──────────────────────────────────────
