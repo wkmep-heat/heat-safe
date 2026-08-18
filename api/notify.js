@@ -9,12 +9,11 @@ const KK_LAT  = 16.4322;
 const KK_LNG  = 102.8359;
 const KK_WMO  = '48381';
 
-// Scheduled notification times (ICT) — เช้า / เที่ยง / เย็น
-const SCHEDULED_TIMES = [
-  { h:  7, m:  0 },
-  { h: 12, m:  0 },
-  { h: 17, m:  0 },
-];
+// Scheduled notification hours (ICT) — เช้า / เที่ยง / เย็น
+// หมายเหตุ: ยิงโดย GitHub Actions (.github/workflows/notify.yml) ซึ่ง schedule trigger
+// ของ GitHub ไม่ตรงนาทีเป๊ะ (ดีเลย์ได้หลายนาทีถึงหลักสิบนาที) จึงเช็กแค่ "ชั่วโมงตรง +
+// ยังไม่เคยส่งของชั่วโมงนี้วันนี้" แทนการเทียบนาทีเป๊ะแบบ Vercel Cron เดิม
+const SCHEDULED_HOURS = [7, 12, 17];
 
 // ── ช่วงเวลาของวัน สำหรับใช้ในข้อความแจ้งเตือน (เช้านี้ / เที่ยงนี้ / เย็นนี้ ...) ──
 function resolvePeriod(hour) {
@@ -343,9 +342,20 @@ export default async function handler(req, res) {
   if (crossedUp(data.pm25, prevState?.pm25 ?? null, PM25_CRITICAL))  reasons.push('pm25_critical');
   if (crossedUp(uvIndex, prevUV, UV_CRITICAL))                       reasons.push('uv_extreme');
 
-  // 4. Scheduled time
-  const isScheduled = SCHEDULED_TIMES.some(t => t.h === ictHour && t.m === ictMinute);
-  if (isScheduled) reasons.push('scheduled');
+  // 4. Scheduled hour — ส่งแค่ครั้งเดียวต่อชั่วโมงเป้าหมาย เทียบจาก notified_at เดิม
+  // (ไม่เทียบนาทีเป๊ะ เพราะ GitHub Actions schedule อาจดีเลย์ได้หลายนาที) ถ้ามีการแจ้งเตือน
+  // เรื่องอื่น (วิกฤต/UV/เตือนภัย) ไปแล้วในชั่วโมงเดียวกัน ก็ถือว่าผู้ใช้ได้รับแจ้งแล้ว ไม่ต้องซ้ำ
+  const isTargetHour = SCHEDULED_HOURS.includes(ictHour);
+  const prevNotifiedAt = prevState?.notified_at ? new Date(prevState.notified_at) : null;
+  const prevICT = prevNotifiedAt
+    ? new Date(prevNotifiedAt.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }))
+    : null;
+  const alreadyNotifiedThisHour = prevICT
+    && prevICT.getFullYear() === ictNow.getFullYear()
+    && prevICT.getMonth()    === ictNow.getMonth()
+    && prevICT.getDate()     === ictNow.getDate()
+    && prevICT.getHours()    === ictHour;
+  if (isTargetHour && !alreadyNotifiedThisHour) reasons.push('scheduled');
 
   if (!reasons.length) {
     res.status(200).json({ skipped: true, ictHour, ictMinute });
