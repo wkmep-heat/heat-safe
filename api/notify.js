@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 const VAPID_PUBLIC  = 'BPK1ArKe9auD9PmUHEyqKDJv-Y_tucS3I73HCpGIIZSskw2_FnvxKqYxk2I4V9nVROtEtQbLDBdr63cAkMx1UnY';
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY;
 const VAPID_EMAIL   = process.env.VAPID_EMAIL ?? 'mailto:admin@kkmap.app';
+const LINE_TOKEN = process.env.LINE_CHANNEL_TOKEN;
 const KK_LAT  = 16.4322;
 const KK_LNG  = 102.8359;
 const KK_WMO  = '48381';
@@ -80,7 +81,11 @@ const UV_LEVELS = [
   { min:  3, label: 'ปานกลาง' },
 ];
 
-webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC, VAPID_PRIVATE);
+// ตั้งค่า VAPID เฉพาะตอนมีคีย์ — ถ้าใช้ LINE อย่างเดียวไม่ตั้ง VAPID_PRIVATE_KEY ก็ยังต้อง
+// import module นี้ได้โดยไม่ throw
+if (VAPID_PRIVATE) {
+  webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC, VAPID_PRIVATE);
+}
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -224,6 +229,8 @@ function buildNotification(data, reasons, period) {
 
 // ── Send push to all subscribers ────────────────────────────────────────────
 async function sendToAll(notification) {
+  if (!VAPID_PRIVATE) return { sent: 0, failed: 0, skipped: true };
+
   const { data: subs } = await supabase
     .from('push_subscriptions')
     .select('endpoint, p256dh, auth');
@@ -249,6 +256,24 @@ async function sendToAll(notification) {
   };
 }
 
+// ── Broadcast ไปยัง LINE OA ─────────────────────────────────────────────────
+async function sendLineBroadcast(notification) {
+  if (!LINE_TOKEN) return { ok: false, skipped: true, reason: 'LINE_CHANNEL_TOKEN not set' };
+
+  const text = `${notification.title}\n\n${notification.body}`;
+  const lineRes = await fetch('https://api.line.me/v2/bot/message/broadcast', {
+    method:  'POST',
+    headers: { Authorization: `Bearer ${LINE_TOKEN}`, 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ messages: [{ type: 'text', text }] }),
+  });
+
+  if (!lineRes.ok) {
+    const err = await lineRes.json().catch(() => ({}));
+    return { ok: false, error: err.message ?? `LINE API ${lineRes.status}` };
+  }
+  return { ok: true };
+}
+
 // ── Main handler ─────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
   // Verify Vercel cron secret
@@ -258,8 +283,8 @@ export default async function handler(req, res) {
     return;
   }
 
-  if (!VAPID_PRIVATE) {
-    res.status(503).json({ error: 'VAPID_PRIVATE_KEY not set' });
+  if (!VAPID_PRIVATE && !LINE_TOKEN) {
+    res.status(503).json({ error: 'ยังไม่ได้ตั้งค่า VAPID_PRIVATE_KEY หรือ LINE_CHANNEL_TOKEN เลยสักอัน' });
     return;
   }
 
@@ -327,10 +352,14 @@ export default async function handler(req, res) {
     return;
   }
 
-  // ── Build and send notification ──────────────────────────────────────────
+  // ── Build and send notification (web push + LINE พร้อมกัน) ────────────────
   const period = resolvePeriod(ictHour);
   const notification = buildNotification(data, reasons, period);
-  const { sent, failed } = await sendToAll(notification);
+  const [pushResult, line] = await Promise.all([
+    sendToAll(notification),
+    sendLineBroadcast(notification),
+  ]);
+  const { sent, failed } = pushResult;
 
   // ── Save current state to Supabase ──────────────────────────────────────
   await supabase.from('notification_state').upsert({
@@ -344,5 +373,5 @@ export default async function handler(req, res) {
     notified_at:  new Date().toISOString(),
   }, { onConflict: 'id' });
 
-  res.status(200).json({ ok: true, sent, failed, reasons, ictHour, ictMinute, notification });
+  res.status(200).json({ ok: true, sent, failed, line, reasons, ictHour, ictMinute, notification });
 }
