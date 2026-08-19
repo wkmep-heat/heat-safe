@@ -87,15 +87,27 @@ function PinPad({ onSuccess }) {
 }
 
 /* ── Alert composer ──────────────────────────────────────────────────────── */
-const IMGBB_KEY = import.meta.env.VITE_IMGBB_KEY || 'b48174b520f12cf5eb763cff034282cd';
+// อัปโหลดผ่าน /api/upload-report-image (Supabase Storage) แทน imgbb เดิม — คีย์ imgbb
+// เดิมเป็นคีย์สาธารณะที่ใช้ร่วมกับโปรเจกต์อื่นนับพัน ล่ม/โดนจำกัดได้บ่อย (ดู ReportView.jsx)
+function fileToDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
-async function uploadImageToImgBB(file) {
-  const form = new FormData();
-  form.append('image', file);
-  const res  = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`, { method: 'POST', body: form });
-  const json = await res.json();
-  if (!json.success) throw new Error('upload failed');
-  return json.data.url;
+async function uploadAlertImage(file) {
+  const dataUrl = await fileToDataURL(file);
+  const res  = await fetch('/api/upload-report-image', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ image: dataUrl }),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || !json.url) throw new Error(json.error ?? 'upload failed');
+  return json.url;
 }
 
 const WATER_SITUATION_LABEL = {
@@ -143,7 +155,7 @@ function AlertComposer() {
     if (!file) return;
     setImgLoading(true);
     try {
-      const url     = await uploadImageToImgBB(file);
+      const url     = await uploadAlertImage(file);
       const preview = URL.createObjectURL(file);
       setImage({ url, preview });
     } catch {

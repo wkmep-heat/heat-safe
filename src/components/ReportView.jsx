@@ -2,8 +2,6 @@ import { useState, useRef } from 'react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 
-const IMGBB_KEY = import.meta.env.VITE_IMGBB_KEY || 'b48174b520f12cf5eb763cff034282cd';
-
 const REPORT_TYPES = [
   { id: 'heat',     label: 'ความร้อน',    icon: '🔥', color: '#dc2626' },
   { id: 'pm25',     label: 'ฝุ่น PM2.5',  icon: '😷', color: '#a855f7' },
@@ -13,27 +11,35 @@ const REPORT_TYPES = [
   { id: 'other',    label: 'อื่นๆ',       icon: '📢', color: '#64748b' },
 ];
 
-async function uploadToImgBB(blob) {
-  const form = new FormData();
-  form.append('image', blob, 'report.jpg');
-  const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`, {
-    method: 'POST',
-    body: form,
+function blobToDataURL(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
   });
-  // imgbb บางครั้งตอบ 503/HTML แทน JSON ตอนเซิร์ฟเวอร์เขามีปัญหา — เช็ก res.ok ก่อน
-  // parse JSON กันโยน SyntaxError ที่สื่อความหมายผิด
-  if (!res.ok) throw new Error(`imgbb HTTP ${res.status}`);
-  const json = await res.json();
-  if (!json.success) throw new Error('upload failed');
-  return json.data.url;
 }
 
-// ลองอัปโหลดรูปซ้ำก่อนยอมแพ้ — imgbb ล่มชั่วคราวได้บ่อย ไม่อยากให้บล็อกการแจ้งเหตุทั้งหมด
-async function uploadToImgBBWithRetry(blob, attempts = 2) {
+// อัปโหลดรูปผ่าน /api/upload-report-image (เซิร์ฟเวอร์ฝั่งเราเอง อัปขึ้น Supabase Storage)
+// แทนที่ imgbb เดิม ซึ่งเป็นคีย์สาธารณะที่ใช้ร่วมกับโปรเจกต์อื่นนับพัน ล่ม/โดนจำกัดได้บ่อย
+async function uploadReportImage(blob) {
+  const dataUrl = await blobToDataURL(blob);
+  const res = await fetch('/api/upload-report-image', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ image: dataUrl }),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || !json.url) throw new Error(json.error ?? `upload HTTP ${res.status}`);
+  return json.url;
+}
+
+// ลองอัปโหลดรูปซ้ำก่อนยอมแพ้ — ไม่อยากให้บล็อกการแจ้งเหตุทั้งหมดเพราะรูปเดียว
+async function uploadReportImageWithRetry(blob, attempts = 2) {
   let lastErr;
   for (let i = 0; i < attempts; i++) {
     try {
-      return await uploadToImgBB(blob);
+      return await uploadReportImage(blob);
     } catch (e) {
       lastErr = e;
       if (i < attempts - 1) await new Promise(r => setTimeout(r, 800));
@@ -139,7 +145,7 @@ export default function ReportView() {
     let imageUrl = null;
     let imageFailed = false;
     try {
-      imageUrl = await uploadToImgBBWithRetry(image.blob);
+      imageUrl = await uploadReportImageWithRetry(image.blob);
     } catch {
       imageFailed = true;
     }
