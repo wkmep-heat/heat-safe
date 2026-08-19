@@ -86,10 +86,13 @@ if (VAPID_PRIVATE) {
   webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC, VAPID_PRIVATE);
 }
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-);
+// สร้าง client แบบกันพัง — ถ้า SUPABASE_URL/KEY หายหรือผิดรูปแบบ createClient() จะ throw
+// ทันทีตอน import module ทำให้ทั้งฟังก์ชัน crash เป็น FUNCTION_INVOCATION_FAILED (ไม่ใช่ JSON
+// error ที่อ่านออก) จับไว้ตรงนี้แทน แล้วให้ handler ตอบ 503 ที่สื่อความหมายได้แทน
+let supabase = null;
+try {
+  supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+} catch { /* จัดการที่ handler ด้านล่าง */ }
 
 // ── XML helper (Node.js has no DOMParser) ───────────────────────────────────
 function xmlVal(block, tag) {
@@ -279,6 +282,11 @@ export default async function handler(req, res) {
   const cronSecret = process.env.CRON_SECRET;
   if (cronSecret && req.headers['authorization'] !== `Bearer ${cronSecret}`) {
     res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  if (!supabase) {
+    res.status(503).json({ error: 'Supabase ยังไม่ได้ตั้งค่าถูกต้อง — ตรวจสอบ SUPABASE_URL/SUPABASE_SERVICE_KEY บน Vercel' });
     return;
   }
 

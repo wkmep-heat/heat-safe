@@ -1,9 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-);
+// สร้าง client แบบกันพัง — createClient() throw ทันทีตอน import ถ้า SUPABASE_URL/KEY
+// หายหรือผิดรูปแบบ ทำให้ crash เป็น FUNCTION_INVOCATION_FAILED แทนที่จะตอบ JSON error
+// ที่อ่านออกได้ (เดิม `if (!supabase)` ด้านล่างเป็นโค้ดที่ไปไม่ถึงเพราะ throw ก่อนเสมอ)
+let supabase = null;
+try {
+  supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+} catch { /* จัดการที่ handler ด้านล่าง */ }
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

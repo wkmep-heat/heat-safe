@@ -5,10 +5,13 @@ import { createClient } from '@supabase/supabase-js';
 // โดนจำกัด/ล่มได้บ่อย — ย้ายมาใช้ Supabase Storage ที่โปรเจกต์นี้มี credential อยู่แล้ว
 // (ตัวเดียวกับที่ api/notify.js ใช้) ไม่ต้องพึ่งบริการภายนอกอีกตัวหนึ่ง
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-);
+// สร้าง client แบบกันพัง — createClient() throw ทันทีตอน import ถ้า SUPABASE_URL/KEY
+// หายหรือผิดรูปแบบ ทำให้ทั้งฟังก์ชัน crash เป็น FUNCTION_INVOCATION_FAILED แทนที่จะตอบ
+// JSON error ที่อ่านออกได้ — จับไว้ตรงนี้แทน แล้วให้ handler ตอบ 503 แทน
+let supabase = null;
+try {
+  supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+} catch { /* จัดการที่ handler ด้านล่าง */ }
 
 const BUCKET = 'report-images';
 let bucketReady = false;
@@ -32,8 +35,8 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
   if (req.method !== 'POST')    { res.status(405).json({ error: 'Method not allowed' }); return; }
 
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
-    res.status(503).json({ error: 'ยังไม่ได้ตั้งค่า SUPABASE_URL/SUPABASE_SERVICE_KEY' });
+  if (!supabase) {
+    res.status(503).json({ error: 'Supabase ยังไม่ได้ตั้งค่าถูกต้อง — ตรวจสอบ SUPABASE_URL/SUPABASE_SERVICE_KEY บน Vercel' });
     return;
   }
 
