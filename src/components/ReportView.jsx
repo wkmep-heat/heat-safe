@@ -20,9 +20,26 @@ async function uploadToImgBB(blob) {
     method: 'POST',
     body: form,
   });
+  // imgbb บางครั้งตอบ 503/HTML แทน JSON ตอนเซิร์ฟเวอร์เขามีปัญหา — เช็ก res.ok ก่อน
+  // parse JSON กันโยน SyntaxError ที่สื่อความหมายผิด
+  if (!res.ok) throw new Error(`imgbb HTTP ${res.status}`);
   const json = await res.json();
   if (!json.success) throw new Error('upload failed');
   return json.data.url;
+}
+
+// ลองอัปโหลดรูปซ้ำก่อนยอมแพ้ — imgbb ล่มชั่วคราวได้บ่อย ไม่อยากให้บล็อกการแจ้งเหตุทั้งหมด
+async function uploadToImgBBWithRetry(blob, attempts = 2) {
+  let lastErr;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await uploadToImgBB(blob);
+    } catch (e) {
+      lastErr = e;
+      if (i < attempts - 1) await new Promise(r => setTimeout(r, 800));
+    }
+  }
+  throw lastErr;
 }
 
 /* ย่อรูปเป็น Blob ก่อนอัปโหลด — จำกัด 800px quality 0.75 */
@@ -65,6 +82,7 @@ export default function ReportView() {
   const [trackingId,  setTrackingId]  = useState('');
   const [loading,   setLoading]   = useState(false);
   const [error,     setError]     = useState('');
+  const [imageWarning, setImageWarning] = useState(false); // อัปโหลดรูปไม่สำเร็จ แต่รายงานส่งไปแล้ว
   const fileRef = useRef(null);
 
   const canSubmit = location && detail.trim() && image && reportType;
@@ -115,9 +133,18 @@ export default function ReportView() {
     if (!canSubmit || loading) return;
     setError('');
     setLoading(true);
-    try {
-      const imageUrl = await uploadToImgBB(image.blob);
 
+    // อัปโหลดรูปแยกจากการส่งรายงาน — imgbb ล่มชั่วคราวได้บ่อย (เจอ 503 จริง) ถ้าอัปโหลด
+    // ไม่สำเร็จ ยังส่งรายงานต่อได้โดยไม่มีรูป ดีกว่าทำรายงานหายทั้งอันเพราะรูปเดียว
+    let imageUrl = null;
+    let imageFailed = false;
+    try {
+      imageUrl = await uploadToImgBBWithRetry(image.blob);
+    } catch {
+      imageFailed = true;
+    }
+
+    try {
       const docRef = await addDoc(collection(db, 'reports'), {
         lat:       location.lat,
         lng:       location.lng,
@@ -140,14 +167,23 @@ export default function ReportView() {
           pin:      '2569',
           title:    `🆕 แจ้งเหตุใหม่ · ${location.address?.split(',')[0] ?? 'ขอนแก่น'}`,
           body:     `${detail.trim()}\n\n${locationLine}`,
-          imageUrl: imageUrl,
+          imageUrl: imageUrl ?? undefined,
         }),
       }).catch(() => {});
 
       setTrackingId(docRef.id);
+      setImageWarning(imageFailed);
       setSubmitted(true);
     } catch (e) {
-      setError('ส่งไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่');
+      // แสดงสาเหตุจริงแทนการเหมาว่าเป็นอินเทอร์เน็ตเสมอ — ช่วยแก้ปัญหาได้ตรงจุดกว่า
+      console.error('report submit failed:', e);
+      setError(
+        e?.code === 'permission-denied'
+          ? 'ไม่มีสิทธิ์ส่งข้อมูล กรุณาลองใหม่ภายหลังหรือติดต่อผู้ดูแลระบบ'
+          : e?.code === 'unavailable' || /network|fetch/i.test(e?.message ?? '')
+          ? 'ส่งไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่'
+          : 'ส่งไม่สำเร็จ เซิร์ฟเวอร์อาจมีปัญหาชั่วคราว กรุณาลองใหม่อีกครั้ง'
+      );
     } finally {
       setLoading(false);
     }
@@ -157,7 +193,7 @@ export default function ReportView() {
     if (image?.preview) URL.revokeObjectURL(image.preview);
     setLocation(null); setGeoStatus('idle'); setGeoError('');
     setDetail(''); setImage(null); setName(''); setPhone('');
-    setReportType(''); setSubmitted(false); setError('');
+    setReportType(''); setSubmitted(false); setError(''); setImageWarning(false);
   };
 
   /* ── Success screen ── */
@@ -173,6 +209,13 @@ export default function ReportView() {
             <p className="text-xl font-black text-slate-800">แจ้งเหตุสำเร็จ</p>
             <p className="text-sm text-slate-500 mt-1">ข้อมูลของคุณถูกส่งไปยังเจ้าหน้าที่แล้ว ขอบคุณที่ช่วยดูแลชุมชน</p>
           </div>
+
+          {imageWarning && (
+            <div className="rounded-xl px-4 py-2.5 text-xs font-semibold text-left"
+              style={{ background: 'rgba(245,158,11,0.1)', color: '#b45309', border: '1px solid rgba(245,158,11,0.3)' }}>
+              ⚠️ อัปโหลดรูปภาพไม่สำเร็จ (เซิร์ฟเวอร์รูปภาพมีปัญหาชั่วคราว) รายละเอียดอื่นๆ ถูกส่งเรียบร้อยแล้ว
+            </div>
+          )}
 
           {/* Tracking code */}
           <div className="rounded-2xl p-4 text-left space-y-2"
