@@ -315,7 +315,8 @@ const STATUS_STYLES = {
 };
 
 const TYPE_STYLES = {
-  heat:     { label: 'ความร้อน',   icon: '🔥', color: '#dc2626' },
+  heat:       { label: 'ความร้อน',   icon: '🔥', color: '#dc2626' },
+  heatstroke: { label: 'ฮีทสโตรก',   icon: '🥵', color: '#ea580c' },
   pm25:     { label: 'ฝุ่น PM2.5', icon: '😷', color: '#a855f7' },
   rain:     { label: 'ฝนตก',       icon: '🌧️', color: '#0ea5e9' },
   flood:    { label: 'น้ำท่วม',    icon: '🌊', color: '#3b82f6' },

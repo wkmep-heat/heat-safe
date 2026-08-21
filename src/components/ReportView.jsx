@@ -3,12 +3,13 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const REPORT_TYPES = [
-  { id: 'heat',     label: 'ความร้อน',    icon: '🔥', color: '#dc2626' },
-  { id: 'pm25',     label: 'ฝุ่น PM2.5',  icon: '😷', color: '#a855f7' },
-  { id: 'rain',     label: 'ฝนตก',        icon: '🌧️', color: '#0ea5e9' },
-  { id: 'flood',    label: 'น้ำท่วม',     icon: '🌊', color: '#3b82f6' },
-  { id: 'accident', label: 'อุบัติเหตุ',  icon: '🚨', color: '#ef4444' },
-  { id: 'other',    label: 'อื่นๆ',       icon: '📢', color: '#64748b' },
+  { id: 'heat',       label: 'ความร้อน',    icon: '🔥', color: '#dc2626' },
+  { id: 'heatstroke', label: 'ฮีทสโตรก',    icon: '🥵', color: '#ea580c' },
+  { id: 'pm25',       label: 'ฝุ่น PM2.5',  icon: '😷', color: '#a855f7' },
+  { id: 'rain',       label: 'ฝนตก',        icon: '🌧️', color: '#0ea5e9' },
+  { id: 'flood',      label: 'น้ำท่วม',     icon: '🌊', color: '#3b82f6' },
+  { id: 'accident',   label: 'อุบัติเหตุ',  icon: '🚨', color: '#ef4444' },
+  { id: 'other',      label: 'อื่นๆ',       icon: '📢', color: '#64748b' },
 ];
 
 function blobToDataURL(blob) {
@@ -291,22 +292,30 @@ export default function ReportView() {
             ประเภทการแจ้งเตือน <span className="text-red-200">*</span>
           </p>
           <div className="grid grid-cols-3 gap-2">
-            {REPORT_TYPES.map(t => (
-              <button
-                key={t.id}
-                onClick={() => setReportType(t.id)}
-                className="flex flex-col items-center gap-1 py-3 rounded-2xl text-xs font-bold transition-all active:scale-95"
-                style={{
-                  background:  reportType === t.id ? t.color + '18' : 'white',
-                  border:      reportType === t.id ? `2px solid ${t.color}` : '1.5px solid #e0eaff',
-                  color:       reportType === t.id ? t.color : '#94a3b8',
-                  boxShadow:   reportType === t.id ? `0 2px 8px ${t.color}30` : 'none',
-                }}
-              >
-                <span style={{ fontSize: 22 }}>{t.icon}</span>
-                {t.label}
-              </button>
-            ))}
+            {REPORT_TYPES.map((t, idx) => {
+              // แถวสุดท้ายเหลือปุ่มเดียวโดดๆ (จำนวนปุ่มหารสามไม่ลงตัว) — ยืดให้เต็มแถวแทน
+              const isLastAlone = idx === REPORT_TYPES.length - 1 && REPORT_TYPES.length % 3 === 1;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setReportType(t.id)}
+                  className={
+                    isLastAlone
+                      ? 'col-span-3 flex flex-row items-center justify-center gap-2 py-3 rounded-2xl text-xs font-bold transition-all active:scale-95'
+                      : 'flex flex-col items-center gap-1 py-3 rounded-2xl text-xs font-bold transition-all active:scale-95'
+                  }
+                  style={{
+                    background:  reportType === t.id ? t.color + '18' : 'white',
+                    border:      reportType === t.id ? `2px solid ${t.color}` : '1.5px solid #e0eaff',
+                    color:       reportType === t.id ? t.color : '#94a3b8',
+                    boxShadow:   reportType === t.id ? `0 2px 8px ${t.color}30` : 'none',
+                  }}
+                >
+                  <span style={{ fontSize: 22 }}>{t.icon}</span>
+                  {t.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
