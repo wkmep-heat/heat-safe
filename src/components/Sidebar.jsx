@@ -17,7 +17,6 @@ const LAYER_BUTTONS = [
   { id: 'temperature', label: 'อุณหภูมิ',               icon: FaThermometerHalf, activeBg: 'rgba(249,115,22,0.10)',  activeBorder: 'rgba(249,115,22,0.4)',  iconColor: '#FB923C' },
   { id: 'buildings',        label: 'อาคาร',                   icon: FaBuilding,        activeBg: 'rgba(245,158,11,0.10)',  activeBorder: 'rgba(245,158,11,0.4)',  iconColor: '#F59E0B' },
   { id: 'stream',      label: 'ร่องน้ำ',                 icon: FaWater,           activeBg: 'rgba(14,165,233,0.10)',  activeBorder: 'rgba(14,165,233,0.4)',  iconColor: '#0EA5E9' },
-  { id: 'waterlevel',  label: 'ระดับน้ำ',                icon: FaTint,            activeBg: 'rgba(2,132,199,0.10)',   activeBorder: 'rgba(2,132,199,0.4)',   iconColor: '#0284C7' },
   { id: 'cctv',       label: 'กล้อง CCTV จราจร',         icon: FaVideo,           activeBg: 'rgba(15,23,42,0.08)',   activeBorder: 'rgba(56,189,248,0.5)', iconColor: '#38bdf8' },
   { id: 'suggested_parks',  label: 'พื้นที่แนะนำสวนสาธารณะ',    icon: FaLeaf,            activeBg: 'rgba(22,163,74,0.08)',   activeBorder: 'rgba(22,163,74,0.4)',   iconColor: '#16a34a' },
   { id: 'monthly_temp',label: 'อุณหภูมิ MODIS รายเดือน', icon: FaSatelliteDish,   activeBg: 'rgba(139,92,246,0.10)', activeBorder: 'rgba(139,92,246,0.4)', iconColor: '#8B5CF6' },

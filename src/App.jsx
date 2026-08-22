@@ -47,7 +47,6 @@ export default function App() {
   const [layerSettings, setLayerSettings] = useState({
     temperature:  { visible: true, opacity: 0.75 },
     stream:       { visible: true, opacity: 0.85 },
-    waterlevel:   { visible: true, opacity: 1 },
     monthly_temp: { visible: true, opacity: 0.80 },
     hotspot:         { visible: true, opacity: 0.90 },
     himawari:        { visible: true, opacity: 0.85 },
@@ -144,7 +143,6 @@ export default function App() {
           initialZoom={mapPosition.zoom}
           onMapMove={handleMapMove}
           mapPin={mapPin}
-          waterStations={waterStations}
           basemap={basemap}
           onBasemapChange={setBasemap}
           heatRiskFilter={heatRiskFilter}
@@ -224,7 +222,6 @@ export default function App() {
               initialZoom={mapPosition.zoom}
               onMapMove={handleMapMove}
               mapPin={mapPin}
-              waterStations={waterStations}
               basemap={basemap}
               onBasemapChange={setBasemap}
               heatRiskFilter={heatRiskFilter}
